@@ -1,0 +1,163 @@
+#include "game_logic.h"
+#include "bot_ai.h"
+#include "definitions.h"
+#include "raylib.h"
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+
+// 外部函式原型
+void shuffle_deck(vector* deck);
+void draw_card(player* p);
+void start_turn(Game* game);
+void init_player_deck(player* p, CharacterType character);
+
+void apply_card_effect(Game* game, int card_hand_index) {
+     player* attacker = &game->inner_game.players[game->inner_game.now_turn_player_id];
+     player* defender = &game->inner_game.players[(game->inner_game.now_turn_player_id + 1) % 2];
+
+    if (card_hand_index < 0 || card_hand_index >= attacker->hand.SIZE) return;
+    
+    const Card* card = get_card_info(attacker->hand.array[card_hand_index]);
+    if (!card) return;
+    if (attacker->energy <= 0) { game->message = "Not enough energy!"; return; }
+
+    attacker->energy--;
+    
+    if (card->type == ATTACK || card->type == SKILL) {
+        int damage = card->value;
+        if(defender->defense >= damage) defender->defense -= damage;
+        else { defender->life -= (damage - defender->defense); defender->defense = 0; }
+    }
+    
+    pushbackVector(&attacker->graveyard, card->id);
+    eraseVector(&attacker->hand, card_hand_index);
+}
+
+void end_turn(Game* game) {
+    game->inner_game.now_turn_player_id = (game->inner_game.now_turn_player_id + 1) % 2;
+    start_turn(game);
+}
+
+void UpdateGame(Game* game) {
+    if (game->current_state == GAME_STATE_GAME_OVER) return;
+
+    switch (game->current_state) {
+        case GAME_STATE_CHOOSE_CHAR: {
+            for(int i = 0; i < 10; i++) {
+                Rectangle btn_bounds = {200.0f + (i % 5) * 180, 250.0f + (i / 5) * 120, 160, 80};
+                if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    init_player_deck(&game->inner_game.players[0], (CharacterType)i);
+                    init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
+                    game->inner_game.now_turn_player_id = 0;
+                    start_turn(game);
+                    return;
+                }
+            }
+            break;
+        }
+        case GAME_STATE_HUMAN_TURN: {
+            player* human = &game->inner_game.players[0];
+            for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
+                Rectangle card_bounds = { 300 + i * 140.0f, 520, 120, 150 };
+                if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    apply_card_effect(game, i);
+                }
+            }
+            Rectangle end_turn_btn = { 1100, 650, 160, 50 };
+            if (CheckCollisionPointRec(GetMousePosition(), end_turn_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                end_turn(game);
+            }
+            break;
+        }
+        case GAME_STATE_BOT_TURN: {
+            game->bot_action_timer -= GetFrameTime();
+            if (game->bot_action_timer <= 0) {
+                int card_to_play = get_bot_action(&game->inner_game);
+                if (card_to_play != -1) {
+                    apply_card_effect(game, card_to_play);
+                }
+                end_turn(game);
+            }
+            break;
+        }
+        case GAME_STATE_GAME_OVER:
+            break;
+    }
+
+    if (game->current_state != GAME_STATE_CHOOSE_CHAR) {
+        if (game->inner_game.players[0].life <= 0) {
+            game->message = "You Lose!";
+            game->current_state = GAME_STATE_GAME_OVER;
+        }
+        if (game->inner_game.players[1].life <= 0) {
+            game->message = "You Win!";
+            game->current_state = GAME_STATE_GAME_OVER;
+        }
+    }
+}
+
+void init_player_deck(player* p, CharacterType character) {
+    p->character = character; p->deck = initVector(); p->hand = initVector(); p->graveyard = initVector(); p->life = 20; p->defense = 0; p->energy = 0;
+    for(int k=0; k<7; ++k) pushbackVector(&p->deck, 101);
+    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 401);
+    switch(character) {
+        case RED_HOOD: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 501); break;
+        case SNOW_WHITE: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 502); break;
+        case SLEEPING_BEAUTY: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 503); break;
+        case ALICE: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 504); break;
+        case MULAN: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 505); break;
+        case KAGUYA: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 506); break;
+        case MERMAID: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 507); break;
+        case MATCH_GIRL: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 508); break;
+        case DOROTHY: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 509); break;
+        case SCHEHERAZADE: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 510); break;
+    }
+    shuffle_deck(&p->deck);
+}
+
+void start_turn(Game* game) {
+    player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
+    p->energy = 3;
+    while(p->hand.SIZE < 5) {
+        draw_card(p);
+    }
+    if (game->inner_game.now_turn_player_id == 0) {
+        game->current_state = GAME_STATE_HUMAN_TURN;
+        game->message = "Your Turn!";
+    } else {
+        game->current_state = GAME_STATE_BOT_TURN;
+        game->message = "Opponent's Turn...";
+        game->bot_action_timer = 1.0f;
+    }
+}
+
+void InitGame(Game* game) {
+    srand(time(NULL));
+    memset(game, 0, sizeof(Game));
+    game->current_state = GAME_STATE_CHOOSE_CHAR;
+    game->message = "Select Your Hero";
+}
+
+void shuffle_deck(vector* deck) {
+    if (deck->SIZE < 2) return;
+    for (uint32_t i = 0; i < deck->SIZE - 1; ++i) {
+        uint32_t j = i + rand() % (deck->SIZE - i);
+        int32_t temp = deck->array[i];
+        deck->array[i] = deck->array[j];
+        deck->array[j] = temp;
+    }
+}
+
+void draw_card(player* p) {
+    if (p->deck.SIZE == 0) {
+        if (p->graveyard.SIZE == 0) return;
+        p->deck = p->graveyard;
+        p->graveyard = initVector();
+        shuffle_deck(&p->deck);
+    }
+    if (p->hand.SIZE < 10) {
+        pushbackVector(&p->hand, p->deck.array[p->deck.SIZE - 1]);
+        popbackVector(&p->deck);
+    }
+}

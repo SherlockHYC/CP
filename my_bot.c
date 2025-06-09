@@ -36,19 +36,16 @@ typedef struct {
 #define DEF_CARD(id, name, type, lvl, val, cst) {id, name, type, lvl, val, cst}
 
 Card card_database[] = {
-    // 攻擊牌
+    // 基本牌
     DEF_CARD(101, "攻擊 LV1", ATTACK, 1, 1, 2),
     DEF_CARD(102, "攻擊 LV2", ATTACK, 2, 2, 4),
     DEF_CARD(103, "攻擊 LV3", ATTACK, 3, 3, 6),
-    // 防禦牌
     DEF_CARD(201, "防禦 LV1", DEFENSE, 1, 1, 2),
     DEF_CARD(202, "防禦 LV2", DEFENSE, 2, 2, 4),
     DEF_CARD(203, "防禦 LV3", DEFENSE, 3, 3, 6),
-    // 移動牌
     DEF_CARD(301, "移動 LV1", MOVE, 1, 1, 1),
     DEF_CARD(302, "移動 LV2", MOVE, 2, 2, 2),
     DEF_CARD(303, "移動 LV3", MOVE, 3, 3, 3),
-    // 通用牌
     DEF_CARD(401, "水晶", GENERIC, 0, 1, 0),
     // 角色技能牌
     DEF_CARD(501, "[小紅帽] 狼之爪擊", SKILL, 1, 2, 0),
@@ -185,9 +182,8 @@ void draw_card(player* p) {
 
 void display_supply_piles(const game* g) {
     printf("--- 商店供應區 ---\n");
-    // 顯示攻擊/防禦/移動牌
-    for (int type_idx = 0; type_idx < 3; ++type_idx) { // 0:ATK, 1:DEF, 2:MOV
-        for (int lvl_idx = 0; lvl_idx < 3; ++lvl_idx) { // 0:LV1, 1:LV2, 2:LV3
+    for (int type_idx = 0; type_idx < 3; ++type_idx) {
+        for (int lvl_idx = 0; lvl_idx < 3; ++lvl_idx) {
             const vector* pile = &g->basicBuyDeck[type_idx][lvl_idx];
             if (pile->SIZE > 0) {
                 const Card* card = get_card_info(pile->array[0]);
@@ -198,7 +194,6 @@ void display_supply_piles(const game* g) {
             }
         }
     }
-    // 顯示通用牌
     const vector* generic_pile = &g->basicBuyDeck[3][0];
     if(generic_pile->SIZE > 0) {
         const Card* card = get_card_info(generic_pile->array[0]);
@@ -305,7 +300,7 @@ void apply_focus_remove(game* g, int32_t choice) {
 }
 
 void apply_buy_card(game* g, int32_t card_id) {
-    if (card_id == 0) return; // 取消購買
+    if (card_id == 0) return;
     player* buyer = &g->players[g->now_turn_player_id];
     const Card* card_to_buy = get_card_info(card_id);
 
@@ -313,7 +308,7 @@ void apply_buy_card(game* g, int32_t card_id) {
     if (buyer->energy < card_to_buy->cost) { printf("錯誤：能量不足！\n"); return; }
 
     bool found_in_supply = false;
-    for(int i=0; i < 4; ++i) { // 4 種牌堆類型
+    for(int i=0; i < 4; ++i) {
         for(int j=0; j < 3; ++j) {
             vector* pile = &g->basicBuyDeck[i][j];
             if(pile->SIZE > 0 && pile->array[0] == card_id) {
@@ -367,10 +362,13 @@ void run_pvb_mode() {
     game pvb_game;
     memset(&pvb_game, 0, sizeof(game));
 
+    int choice = -1;
     printf("請選擇你的角色:\n");
-    for(int i=0; i < 10; ++i) printf("  %d: %s\n", i, character_names[i]);
+    for(int i=0; i < 10; ++i) {
+        printf("  %d: %s\n", i, character_names[i]);
+    }
     printf("你的選擇: ");
-    int choice = get_clean_integer_input();
+    choice = get_clean_integer_input();
     
     CharacterType human_char = (choice >= 0 && choice < 10) ? (CharacterType)choice : RED_HOOD;
     CharacterType bot_char = (CharacterType)(rand() % 10);
@@ -378,20 +376,18 @@ void run_pvb_mode() {
     init_player_deck(&pvb_game.players[0], human_char);
     init_player_deck(&pvb_game.players[1], bot_char);
 
-    // 初始化商店
     for(int i=0; i<18; ++i) {
-        pushbackVector(&pvb_game.basicBuyDeck[0][0], 101); // ATK LV1
-        pushbackVector(&pvb_game.basicBuyDeck[0][1], 102); // ATK LV2
-        pushbackVector(&pvb_game.basicBuyDeck[0][2], 103); // ATK LV3
-        pushbackVector(&pvb_game.basicBuyDeck[1][0], 201); // DEF LV1
-        pushbackVector(&pvb_game.basicBuyDeck[1][1], 202); // DEF LV2
-        pushbackVector(&pvb_game.basicBuyDeck[1][2], 203); // DEF LV3
-        pushbackVector(&pvb_game.basicBuyDeck[2][0], 301); // MOV LV1
-        pushbackVector(&pvb_game.basicBuyDeck[2][1], 302); // MOV LV2
-        pushbackVector(&pvb_game.basicBuyDeck[2][2], 303); // MOV LV3
-        pushbackVector(&pvb_game.basicBuyDeck[3][0], 401); // GENERIC (水晶)
+        pushbackVector(&pvb_game.basicBuyDeck[0][0], 101);
+        pushbackVector(&pvb_game.basicBuyDeck[0][1], 102);
+        pushbackVector(&pvb_game.basicBuyDeck[0][2], 103);
+        pushbackVector(&pvb_game.basicBuyDeck[1][0], 201);
+        pushbackVector(&pvb_game.basicBuyDeck[1][1], 202);
+        pushbackVector(&pvb_game.basicBuyDeck[1][2], 203);
+        pushbackVector(&pvb_game.basicBuyDeck[2][0], 301);
+        pushbackVector(&pvb_game.basicBuyDeck[2][1], 302);
+        pushbackVector(&pvb_game.basicBuyDeck[2][2], 303);
+        pushbackVector(&pvb_game.basicBuyDeck[3][0], 401);
     }
-
 
     while (pvb_game.players[0].life > 0 && pvb_game.players[1].life > 0) {
         player* p = &pvb_game.players[pvb_game.now_turn_player_id];
