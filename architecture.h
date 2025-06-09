@@ -203,7 +203,7 @@ CHOOSE_MOVE_NEARBY            int8_t       move to the locate next to target(-1:
 
 KEEP_OR_BACK                  int8_t       keep the card or drop it(1:keep, 0:drop, the card store in nowusingCardID)
 LOST_LIFE_FOR_REMOVECARD      int8_t       kaguya's skill, (1:lost, 0:no)
-KAGUYA_MOVE_TARGET                   int8_t       kaguya's move metamorphosis(-n:left, n:right, n is distance)
+KAGUYA_MOVE_TARGET            int8_t       kaguya's move metamorphosis(-n:left, n:right, n is distance)
 
 MOVE_TO_TANTACLE              int32_t      locate you choose(should in tentacle_TOKEN_locate or your original locate)
 CHOOSE_TANTACLE               int32_t      choose a tantacle
