@@ -6,12 +6,85 @@
 #include <stdlib.h>
 #include <time.h>
 
-// 外部函式原型
-void shuffle_deck(vector* deck);
-void draw_card(player* p);
+// 函式原型
+void apply_card_effect(Game* game, int card_hand_index);
+void end_turn(Game* game);
 void start_turn(Game* game);
 void init_player_deck(player* p, CharacterType character);
+void draw_card(player* p);
+void shuffle_deck(vector* deck);
 
+
+// [修改] UpdateGame 不再回傳值，而是透過指標來設定退出請求
+void UpdateGame(Game* game, bool* should_close) {
+    // 根據遊戲狀態處理更新與輸入
+    switch (game->current_state) {
+        case GAME_STATE_CHOOSE_CHAR: {
+            // 處理角色選擇按鈕
+            for(int i = 0; i < 10; i++) {
+                Rectangle btn_bounds = {200.0f + (i % 5) * 180, 250.0f + (i / 5) * 120, 160, 80};
+                if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    init_player_deck(&game->inner_game.players[0], (CharacterType)i);
+                    init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
+                    game->inner_game.now_turn_player_id = 0;
+                    start_turn(game);
+                    return; // 動作已處理，立刻結束本幀的更新
+                }
+            }
+            // 處理退出按鈕
+            Rectangle exit_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
+            if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                printf("[DEBUG] Exit button clicked. Setting quit flag...\n");
+                *should_close = true; // [修改] 直接設定退出旗標
+                return; 
+            }
+            break;
+        }
+        case GAME_STATE_HUMAN_TURN: {
+            // 處理手牌和結束回合按鈕的邏輯
+            player* human = &game->inner_game.players[0];
+            for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
+                Rectangle card_bounds = { 300 + i * 140.0f, 520, 120, 150 };
+                if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    apply_card_effect(game, i);
+                }
+            }
+            Rectangle end_turn_btn = { 1100, 650, 160, 50 };
+            if (CheckCollisionPointRec(GetMousePosition(), end_turn_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                end_turn(game);
+            }
+            break;
+        }
+        case GAME_STATE_BOT_TURN: {
+            // Bot 邏輯
+            game->bot_action_timer -= GetFrameTime();
+            if (game->bot_action_timer <= 0) {
+                int card_to_play = get_bot_action(&game->inner_game);
+                if (card_to_play != -1) {
+                    apply_card_effect(game, card_to_play);
+                }
+                end_turn(game);
+            }
+            break;
+        }
+        case GAME_STATE_GAME_OVER: {
+            // "回到主選單"按鈕邏輯
+            Rectangle back_btn = { (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 + 40, 250, 50 };
+            if (CheckCollisionPointRec(GetMousePosition(), back_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                InitGame(game);
+            }
+            break;
+        }
+    }
+
+    // 只有在遊戲進行中才檢查勝利/失敗條件
+    if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
+        if (game->inner_game.players[0].life <= 0) { game->message = "You Lose!"; game->current_state = GAME_STATE_GAME_OVER; }
+        if (game->inner_game.players[1].life <= 0) { game->message = "You Win!"; game->current_state = GAME_STATE_GAME_OVER; }
+    }
+}
+
+// --- 以下是其他函式的實作 (內容不變) ---
 void apply_card_effect(Game* game, int card_hand_index) {
      player* attacker = &game->inner_game.players[game->inner_game.now_turn_player_id];
      player* defender = &game->inner_game.players[(game->inner_game.now_turn_player_id + 1) % 2];
@@ -37,64 +110,6 @@ void apply_card_effect(Game* game, int card_hand_index) {
 void end_turn(Game* game) {
     game->inner_game.now_turn_player_id = (game->inner_game.now_turn_player_id + 1) % 2;
     start_turn(game);
-}
-
-void UpdateGame(Game* game) {
-    if (game->current_state == GAME_STATE_GAME_OVER) return;
-
-    switch (game->current_state) {
-        case GAME_STATE_CHOOSE_CHAR: {
-            for(int i = 0; i < 10; i++) {
-                Rectangle btn_bounds = {200.0f + (i % 5) * 180, 250.0f + (i / 5) * 120, 160, 80};
-                if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                    init_player_deck(&game->inner_game.players[0], (CharacterType)i);
-                    init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
-                    game->inner_game.now_turn_player_id = 0;
-                    start_turn(game);
-                    return;
-                }
-            }
-            break;
-        }
-        case GAME_STATE_HUMAN_TURN: {
-            player* human = &game->inner_game.players[0];
-            for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-                Rectangle card_bounds = { 300 + i * 140.0f, 520, 120, 150 };
-                if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                    apply_card_effect(game, i);
-                }
-            }
-            Rectangle end_turn_btn = { 1100, 650, 160, 50 };
-            if (CheckCollisionPointRec(GetMousePosition(), end_turn_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                end_turn(game);
-            }
-            break;
-        }
-        case GAME_STATE_BOT_TURN: {
-            game->bot_action_timer -= GetFrameTime();
-            if (game->bot_action_timer <= 0) {
-                int card_to_play = get_bot_action(&game->inner_game);
-                if (card_to_play != -1) {
-                    apply_card_effect(game, card_to_play);
-                }
-                end_turn(game);
-            }
-            break;
-        }
-        case GAME_STATE_GAME_OVER:
-            break;
-    }
-
-    if (game->current_state != GAME_STATE_CHOOSE_CHAR) {
-        if (game->inner_game.players[0].life <= 0) {
-            game->message = "You Lose!";
-            game->current_state = GAME_STATE_GAME_OVER;
-        }
-        if (game->inner_game.players[1].life <= 0) {
-            game->message = "You Win!";
-            game->current_state = GAME_STATE_GAME_OVER;
-        }
-    }
 }
 
 void init_player_deck(player* p, CharacterType character) {

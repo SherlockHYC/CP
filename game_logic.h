@@ -5,7 +5,7 @@
 
 // GUI 遊戲狀態
 typedef enum {
-    GAME_STATE_CHOOSE_CHAR, // 新增：角色選擇階段
+    GAME_STATE_CHOOSE_CHAR,
     GAME_STATE_HUMAN_TURN,
     GAME_STATE_BOT_TURN,
     GAME_STATE_GAME_OVER
@@ -21,6 +21,7 @@ typedef struct Game {
 
 // 函式原型
 void InitGame(Game* game);
-void UpdateGame(Game* game);
+// [修改] UpdateGame 不再回傳值，而是透過指標來設定退出請求
+void UpdateGame(Game* game, bool *should_close); 
 
 #endif // GAME_LOGIC_H

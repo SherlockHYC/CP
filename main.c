@@ -4,46 +4,62 @@
 #include <stdio.h>
 #include <string.h>
 
-// 全域變數，用來存放載入的字型
+// 全域變數
 Font font;
+Texture2D backgroundTexture;
 
 void show_help();
 
 int main(int argc, char *argv[])
 {
-    if (argc > 1 && strcmp(argv[1], "--help") == 0) {
-        show_help();
-        return 0;
+    if (argc > 1) {
+        if (strcmp(argv[1], "--help") == 0) {
+            show_help();
+            return 0;
+        }
     }
 
-    // 初始化視窗
     const int screenWidth = 1280;
     const int screenHeight = 720;
     InitWindow(screenWidth, screenHeight, "Twisted Fables - GUI Edition");
 
-    // 載入中文字型檔 (請確保檔案與執行檔在同一目錄下)
-    font = LoadFontEx("NotoSansTC-Regular.otf", 32, 0, 0);
+    if (!IsWindowReady()) {
+        printf("ERROR: Failed to initialize window.\n");
+        return 1;
+    }
+
+    font = GetFontDefault();
+    backgroundTexture = LoadTexture("background.png");
+    
     SetTargetFPS(60);
 
     Game game;
     InitGame(&game);
-    
-    // 遊戲主迴圈
-    while (!WindowShouldClose())
-    {
-        UpdateGame(&game);
 
+    // [新增] 我們的自訂退出旗標
+    bool should_exit = false; 
+    
+    // --- 遊戲主迴圈 ---
+    // [修改] 迴圈現在會檢查 Raylib 的退出信號和我們自己的退出旗標
+    while (!should_exit && !WindowShouldClose())
+    {
+        // 1. 更新遊戲狀態，並將退出旗標的指標傳入
+        UpdateGame(&game, &should_exit);
+        
+        // 2. 繪圖
         BeginDrawing();
         ClearBackground(DARKGRAY);
         DrawGame(&game);
         EndDrawing();
     }
 
-    // 清理資源
-    UnloadFont(font); // 卸載字型
+    // --- 清理資源並關閉視窗 ---
+    UnloadTexture(backgroundTexture);
     CloseWindow();
+
     return 0;
 }
+
 
 void show_help() {
     printf("\n--- Twisted Fables GUI Edition 使用說明 ---\n\n");
