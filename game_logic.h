@@ -17,11 +17,11 @@ typedef struct Game {
     GameState current_state;
     const char* message;
     float bot_action_timer;
+    bool player_has_acted; // [新增] 追蹤玩家本回合是否已行動
 } Game;
 
 // 函式原型
 void InitGame(Game* game);
-// [修改] UpdateGame 不再回傳值，而是透過指標來設定退出請求
 void UpdateGame(Game* game, bool *should_close); 
 
 #endif // GAME_LOGIC_H
