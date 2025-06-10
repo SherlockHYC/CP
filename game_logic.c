@@ -18,14 +18,19 @@ void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
 
+    // 1. Move all cards from hand to graveyard.
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         pushbackVector(&p->graveyard, p->hand.array[i]);
     }
+    // 2. Clear the hand.
     clearVector(&p->hand);
 
+    // 3. Reset stats for the end of the turn.
     p->energy = 0;
-    p->defense = 0;
+    // [MODIFIED] Defense is no longer reset at the end of the turn.
+    // p->defense = 0; 
     
+    // 4. Switch to the next player.
     game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
@@ -159,6 +164,7 @@ void start_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
     
+    // [MODIFIED] Defense is now reset at the START of the player's turn.
     p->defense = 0;
     game->player_has_acted = false;
     
@@ -236,7 +242,6 @@ void apply_card_effect(Game* game, int card_hand_index) {
     const Card* card = get_card_info(attacker->hand.array[card_hand_index]);
     if (!card) return;
 
-    // Store the card ID before it's potentially removed from hand
     int32_t played_card_id = card->id;
     CardType type = card->type;
 
@@ -279,8 +284,6 @@ void apply_card_effect(Game* game, int card_hand_index) {
 
     game->player_has_acted = true;
     
-    // [FIX] Always discard the card after resolving its effect.
-    // The conditional check was the source of the bug.
     pushbackVector(&attacker->graveyard, played_card_id);
     eraseVector(&attacker->hand, card_hand_index);
 }
