@@ -6,64 +6,18 @@
 #include <stdlib.h>
 #include <time.h>
 
-// 函式原型
+// Function Prototypes
 void shuffle_deck(vector* deck);
 void draw_card(player* p);
 void start_turn(Game* game);
 void init_player_deck(player* p, CharacterType character);
-
-// [修改] 重構傷害計算邏輯以修正血量溢位 Bug
-void apply_card_effect(Game* game, int card_hand_index) {
-    player* attacker = &game->inner_game.players[game->inner_game.now_turn_player_id];
-    player* defender = &game->inner_game.players[(game->inner_game.now_turn_player_id + 1) % 2];
-
-    if (card_hand_index < 0 || card_hand_index >= (int)attacker->hand.SIZE) return;
-    
-    const Card* card = get_card_info(attacker->hand.array[card_hand_index]);
-    if (!card) return;
-    if (attacker->energy <= 0) { game->message = "能量不足!"; return; }
-
-    attacker->energy--;
-    game->player_has_acted = true;
-    
-    // --- 處理卡牌效果 ---
-    // 處理防禦牌
-    if (card->type == DEFENSE) {
-        attacker->defense += card->value;
-    } 
-    // 處理所有造成傷害的牌 (攻擊牌與技能牌)
-    else if (card->type == ATTACK || (card->type == SKILL && card->value > 0)) {
-        int damage_to_deal = card->value;
-        
-        // 1. 先用防禦抵銷傷害
-        if (defender->defense > 0) {
-            if (defender->defense >= damage_to_deal) {
-                defender->defense -= damage_to_deal;
-                damage_to_deal = 0; // 傷害被完全抵擋
-            } else {
-                damage_to_deal -= defender->defense;
-                defender->defense = 0;
-            }
-        }
-        
-        // 2. 如果還有剩餘傷害，再安全地扣除生命值
-        if (damage_to_deal > 0) {
-            // [修正] 這是防止血量溢位的關鍵檢查
-            if (defender->life <= damage_to_deal) {
-                defender->life = 0; // 如果傷害大於等於目前生命，直接設為0
-            } else {
-                defender->life -= damage_to_deal; // 否則才執行減法
-            }
-        }
-    }
-    
-    // 將使用過的卡牌移至棄牌堆
-    pushbackVector(&attacker->graveyard, card->id);
-    eraseVector(&attacker->hand, card_hand_index);
-}
+void apply_card_effect(Game* game, int card_hand_index);
 
 void end_turn(Game* game) {
-    game->inner_game.players[game->inner_game.now_turn_player_id].defense = 0;
+    player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
+    p->energy = 0;
+    p->defense = 0;
+    
     game->inner_game.now_turn_player_id = (game->inner_game.now_turn_player_id + 1) % 2;
     start_turn(game);
 }
@@ -83,36 +37,29 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle exit_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 *should_close = true;
-                return; 
+                return;
             }
             break;
         }
         case GAME_STATE_HUMAN_TURN: {
-            Rectangle focus_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 130.0f, 160, 50 };
-            if (CheckCollisionPointRec(GetMousePosition(), focus_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                if (!game->player_has_acted) {
-                    game->message = "你選擇了專注！";
-                    end_turn(game);
-                    return;
-                } else {
-                    game->message = "專注只能是第一個行動！";
-                }
-            }
-
             player* human = &game->inner_game.players[0];
-            const int CARD_WIDTH = 120;
-            const int CARD_HEIGHT = 170;
-            int hand_width = human->hand.SIZE * (CARD_WIDTH + 10) - 10;
+            int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
             float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
+            float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
+
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-                Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 10), GetScreenHeight() - CARD_HEIGHT - 20, CARD_WIDTH, CARD_HEIGHT };
+                Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
+                 if (CheckCollisionPointRec(GetMousePosition(), card_bounds)) {
+                    card_bounds.y -= 20; // Hover effect
+                }
                 if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     apply_card_effect(game, i);
-                    break; 
+                    break;
                 }
             }
-
-            Rectangle end_turn_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
+            
+            // [MODIFIED] Update End Turn button coordinates to match the GUI
+            Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), end_turn_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 end_turn(game);
             }
@@ -130,7 +77,7 @@ void UpdateGame(Game* game, bool* should_close) {
             break;
         }
         case GAME_STATE_GAME_OVER: {
-            Rectangle back_btn = { (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 + 40, 250, 50 };
+             Rectangle back_btn = { (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 + 40, 250, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), back_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 InitGame(game);
             }
@@ -145,11 +92,9 @@ void UpdateGame(Game* game, bool* should_close) {
 
 void init_player_deck(player* p, CharacterType character) {
     p->character = character; p->deck = initVector(); p->hand = initVector(); p->graveyard = initVector(); p->life = 20; p->defense = 0; p->energy = 0;
-    
     for(int k=0; k<5; ++k) pushbackVector(&p->deck, 101);
     for(int k=0; k<2; ++k) pushbackVector(&p->deck, 201);
     for(int k=0; k<3; ++k) pushbackVector(&p->deck, 401);
-
     switch(character) {
         case RED_HOOD: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 501); break;
         case SNOW_WHITE: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 502); break;
@@ -166,19 +111,21 @@ void init_player_deck(player* p, CharacterType character) {
 }
 
 void start_turn(Game* game) {
-    player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
-    p->energy = 3;
+    int player_id = game->inner_game.now_turn_player_id;
+    player* p = &game->inner_game.players[player_id];
+    
     p->defense = 0;
     game->player_has_acted = false;
-    while(p->hand.SIZE < 5) {
+    
+    while(p->hand.SIZE < 6) {
         draw_card(p);
     }
-    if (game->inner_game.now_turn_player_id == 0) {
+    if (player_id == 0) {
         game->current_state = GAME_STATE_HUMAN_TURN;
-        game->message = "你的回合！";
+        game->message = "Your Turn!";
     } else {
         game->current_state = GAME_STATE_BOT_TURN;
-        game->message = "對手回合...";
+        game->message = "Opponent's Turn...";
         game->bot_action_timer = 1.0f;
     }
 }
@@ -211,4 +158,51 @@ void draw_card(player* p) {
         pushbackVector(&p->hand, p->deck.array[p->deck.SIZE - 1]);
         popbackVector(&p->deck);
     }
+}
+
+void apply_card_effect(Game* game, int card_hand_index) {
+    int player_id = game->inner_game.now_turn_player_id;
+    player* attacker = &game->inner_game.players[player_id];
+    player* defender = &game->inner_game.players[(player_id + 1) % 2];
+    if (card_hand_index < 0 || card_hand_index >= (int)attacker->hand.SIZE) return;
+    const Card* card = get_card_info(attacker->hand.array[card_hand_index]);
+    if (!card) return;
+
+    CardType type = card->type;
+
+    if (type == ATTACK || type == DEFENSE || type == MOVE || type == GENERIC) {
+        attacker->energy += card->value;
+        if(type == ATTACK) {
+             int damage = card->value;
+             if(defender->defense >= damage) defender->defense -= damage;
+             else { 
+                int damage_left = damage - defender->defense;
+                defender->defense = 0;
+                if (defender->life <= damage_left) defender->life = 0;
+                else defender->life -= damage_left;
+             }
+        } else if (type == DEFENSE) {
+            attacker->defense += card->value;
+        }
+    } else if (type == SKILL) {
+        if (attacker->energy < card->cost) {
+            game->message = "Not enough energy for this skill!";
+            return;
+        }
+        attacker->energy -= card->cost;
+        if(card->value > 0) {
+             int damage = card->value;
+             if(defender->defense >= damage) defender->defense -= damage;
+             else { 
+                int damage_left = damage - defender->defense;
+                defender->defense = 0;
+                if(defender->life <= damage_left) defender->life = 0;
+                else defender->life -= damage_left;
+             }
+        }
+    }
+
+    game->player_has_acted = true;
+    pushbackVector(&attacker->graveyard, card->id);
+    eraseVector(&attacker->hand, card_hand_index);
 }

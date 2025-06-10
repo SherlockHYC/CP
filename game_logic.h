@@ -3,7 +3,7 @@
 
 #include "architecture.h"
 
-// GUI 遊戲狀態
+// GUI Game States
 typedef enum {
     GAME_STATE_CHOOSE_CHAR,
     GAME_STATE_HUMAN_TURN,
@@ -11,16 +11,17 @@ typedef enum {
     GAME_STATE_GAME_OVER
 } GameState;
 
-// 主遊戲結構
+// Main Game Struct
 typedef struct Game {
     game inner_game;
     GameState current_state;
     const char* message;
     float bot_action_timer;
-    bool player_has_acted; // [新增] 追蹤玩家本回合是否已行動
+    bool player_has_acted;
+    // [REMOVED] The player_attack_power member is no longer needed.
 } Game;
 
-// 函式原型
+// Function Prototypes
 void InitGame(Game* game);
 void UpdateGame(Game* game, bool *should_close); 
 
