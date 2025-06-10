@@ -15,11 +15,18 @@ void apply_card_effect(Game* game, int card_hand_index);
 void apply_movement(Game* game, int direction);
 
 void end_turn(Game* game) {
-    player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
+    int player_id = game->inner_game.now_turn_player_id;
+    player* p = &game->inner_game.players[player_id];
+
+    for (uint32_t i = 0; i < p->hand.SIZE; i++) {
+        pushbackVector(&p->graveyard, p->hand.array[i]);
+    }
+    clearVector(&p->hand);
+
     p->energy = 0;
     p->defense = 0;
     
-    game->inner_game.now_turn_player_id = (game->inner_game.now_turn_player_id + 1) % 2;
+    game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
 
@@ -32,7 +39,6 @@ void UpdateGame(Game* game, bool* should_close) {
                     init_player_deck(&game->inner_game.players[0], (CharacterType)i);
                     init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
                     
-                    // Set initial positions
                     game->inner_game.players[0].locate[0] = 6;
                     game->inner_game.players[1].locate[0] = 4;
 
@@ -43,25 +49,22 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle exit_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 *should_close = true;
-                return; 
+                return;
             }
             break;
         }
         case GAME_STATE_HUMAN_TURN: {
-            // Handle "Focus" button click
             Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), focus_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 if (!game->player_has_acted) {
                     game->message = "You chose to Focus!";
-                    // (Future logic for removing a card can go here)
-                    end_turn(game); // Focus ends the turn immediately
-                    return; 
+                    end_turn(game);
+                    return;
                 } else {
                     game->message = "Focus must be your first action!";
                 }
             }
 
-            // Handle card clicks
             player* human = &game->inner_game.players[0];
             int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
             float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
@@ -70,7 +73,7 @@ void UpdateGame(Game* game, bool* should_close) {
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
                 Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
                  if (CheckCollisionPointRec(GetMousePosition(), card_bounds)) {
-                    // This hover effect is visual only, handled in gui.c
+                    card_bounds.y -= 20;
                 }
                 if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     apply_card_effect(game, i);
@@ -78,7 +81,6 @@ void UpdateGame(Game* game, bool* should_close) {
                 }
             }
             
-            // Handle End Turn button click
             Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), end_turn_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 end_turn(game);
@@ -122,24 +124,33 @@ void UpdateGame(Game* game, bool* should_close) {
 }
 
 void init_player_deck(player* p, CharacterType character) {
-    p->character = character; p->deck = initVector(); p->hand = initVector(); p->graveyard = initVector(); p->life = 20; p->defense = 0; p->energy = 0;
+    p->character = character; 
+    p->deck = initVector(); 
+    p->hand = initVector(); 
+    p->graveyard = initVector(); 
+    p->life = 20; 
+    p->defense = 0; 
+    p->energy = 0;
     
-    for(int k=0; k<5; ++k) pushbackVector(&p->deck, 101);
-    for(int k=0; k<2; ++k) pushbackVector(&p->deck, 201);
-    for(int k=0; k<2; ++k) pushbackVector(&p->deck, 301);
-    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 401);
+    // 3x Level 1 Attack
+    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 101);
+    // 3x Level 1 Defense
+    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 201);
+    // 3x Level 1 Move
+    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 301);
 
+    // 3x Character-specific Level 1 Skill
     switch(character) {
-        case RED_HOOD: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 501); break;
-        case SNOW_WHITE: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 502); break;
-        case SLEEPING_BEAUTY: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 503); break;
-        case ALICE: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 504); break;
-        case MULAN: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 505); break;
-        case KAGUYA: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 506); break;
-        case MERMAID: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 507); break;
-        case MATCH_GIRL: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 508); break;
-        case DOROTHY: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 509); break;
-        case SCHEHERAZADE: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 510); break;
+        case RED_HOOD: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 501); break;
+        case SNOW_WHITE: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 502); break;
+        case SLEEPING_BEAUTY: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 503); break;
+        case ALICE: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 504); break;
+        case MULAN: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 505); break;
+        case KAGUYA: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 506); break;
+        case MERMAID: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 507); break;
+        case MATCH_GIRL: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 508); break;
+        case DOROTHY: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 509); break;
+        case SCHEHERAZADE: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 510); break;
     }
     shuffle_deck(&p->deck);
 }
@@ -225,6 +236,8 @@ void apply_card_effect(Game* game, int card_hand_index) {
     const Card* card = get_card_info(attacker->hand.array[card_hand_index]);
     if (!card) return;
 
+    // Store the card ID before it's potentially removed from hand
+    int32_t played_card_id = card->id;
     CardType type = card->type;
 
     if (type == ATTACK || type == DEFENSE || type == GENERIC) {
@@ -265,9 +278,9 @@ void apply_card_effect(Game* game, int card_hand_index) {
     }
 
     game->player_has_acted = true;
-    // Only move the card if the state didn't change to choosing a direction
-    if(game->current_state != GAME_STATE_CHOOSE_MOVE_DIRECTION){
-        pushbackVector(&attacker->graveyard, card->id);
-        eraseVector(&attacker->hand, card_hand_index);
-    }
+    
+    // [FIX] Always discard the card after resolving its effect.
+    // The conditional check was the source of the bug.
+    pushbackVector(&attacker->graveyard, played_card_id);
+    eraseVector(&attacker->hand, card_hand_index);
 }
