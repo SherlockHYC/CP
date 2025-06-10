@@ -11,7 +11,8 @@ typedef enum {
     GAME_STATE_BOT_TURN,
     GAME_STATE_GAME_OVER,
     GAME_STATE_SHOP, 
-    GAME_STATE_CHOOSE_MOVE_DIRECTION 
+    GAME_STATE_CHOOSE_MOVE_DIRECTION,
+    GAME_STATE_FOCUS_REMOVE // [NEW] State for selecting a card to remove with Focus
 } GameState;
 
 // Main Game Struct
@@ -22,11 +23,7 @@ typedef struct Game {
     float bot_action_timer;
     bool player_has_acted;
 
-    // Shop card piles: [Type][Level-1]
-    // Type 0: Attack, 1: Defense, 2: Move
     vector shop_piles[3][3];
-
-    // [FIX] Added the missing member back
     int pending_move_distance; 
 } Game;
 
