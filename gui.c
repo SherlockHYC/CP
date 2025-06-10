@@ -29,7 +29,13 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
         if (card->type == ATTACK) DrawTextEx(font, TextFormat("Attack: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, RED);
         else if (card->type == DEFENSE) DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, DARKGREEN);
         else if (card->type == SKILL) DrawTextEx(font, "Skill", (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, BLUE);
-        DrawTextEx(font, "Cost: 1 Energy", (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, DARKGRAY);
+        else if (card->type == MOVE) DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, PURPLE);
+        
+        if (card->type == ATTACK || card->type == DEFENSE || card->type == MOVE || card->type == GENERIC) {
+             DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
+        } else if (card->type == SKILL) {
+             DrawTextEx(font, TextFormat("Cost: %d Energy", card->cost), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, DARKGRAY);
+        }
     }
 }
 
@@ -105,7 +111,6 @@ void DrawGameBoard(const Game* game) {
         DrawCircleLinesV(bottom_center, circle_radius, BLACK);
         if(i == 5) DrawRing(bottom_center, circle_radius - thickness, circle_radius, 0, 360, 36, BLACK);
         
-        // [MODIFIED] Draw player tokens on the bottom row
         for(int p_idx = 0; p_idx < 2; p_idx++){
             if(game->inner_game.players[p_idx].locate[0] == i) {
                 Color token_color = (p_idx == 0) ? BLUE : RED;
@@ -157,10 +162,11 @@ void DrawBattleInterface(const Game* game) {
          DrawRectangleRoundedLinesEx(bot_card, 0.08f, 10, 4, BLUE);
     }
     
-    Rectangle end_turn_btn = { (float)GetScreenWidth() / 2.0f - 90, GetScreenHeight() - 50, 180, 40 };
+    // [MODIFIED] Moved End Turn button to the bottom right
+    Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
     bool btn_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
     DrawRectangleRec(end_turn_btn, btn_hover ? LIME : GREEN);
-    DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 10 }, 24, 1, BLACK);
+    DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 15 }, 20, 1, BLACK);
 
     Vector2 message_size = MeasureTextEx(font, game->message, 40, 2);
     DrawTextEx(font, game->message, (Vector2){ (GetScreenWidth() - message_size.x)/2, GetScreenHeight() / 2.0f }, 40, 2, WHITE);
@@ -175,6 +181,20 @@ void DrawGame(Game* game) {
         DrawPlayerInfo(game, true);
         DrawPlayerInfo(game, false);
         DrawBattleInterface(game);
+        
+        if (game->current_state == GAME_STATE_CHOOSE_MOVE_DIRECTION) {
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.5f));
+            DrawTextEx(font, "Choose Direction", (Vector2){480, 300}, 40, 1, WHITE);
+            
+            Rectangle leftBtn = {480, 350, 120, 50};
+            Rectangle rightBtn = {680, 350, 120, 50};
+            
+            DrawRectangleRec(leftBtn, CheckCollisionPointRec(GetMousePosition(), leftBtn) ? SKYBLUE : BLUE);
+            DrawText("Left", leftBtn.x + 35, leftBtn.y + 15, 20, WHITE);
+            
+            DrawRectangleRec(rightBtn, CheckCollisionPointRec(GetMousePosition(), rightBtn) ? SKYBLUE : BLUE);
+            DrawText("Right", rightBtn.x + 30, rightBtn.y + 15, 20, WHITE);
+        }
         
         if (game->current_state == GAME_STATE_GAME_OVER) {
             DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.6f));

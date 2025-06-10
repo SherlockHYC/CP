@@ -7,6 +7,7 @@
 typedef enum {
     GAME_STATE_CHOOSE_CHAR,
     GAME_STATE_HUMAN_TURN,
+    GAME_STATE_CHOOSE_MOVE_DIRECTION, // New state for choosing move direction
     GAME_STATE_BOT_TURN,
     GAME_STATE_GAME_OVER
 } GameState;
@@ -18,7 +19,7 @@ typedef struct Game {
     const char* message;
     float bot_action_timer;
     bool player_has_acted;
-    // [REMOVED] The player_attack_power member is no longer needed.
+    int pending_move_distance; // New: stores the distance for the pending move
 } Game;
 
 // Function Prototypes

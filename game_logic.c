@@ -12,6 +12,7 @@ void draw_card(player* p);
 void start_turn(Game* game);
 void init_player_deck(player* p, CharacterType character);
 void apply_card_effect(Game* game, int card_hand_index);
+void apply_movement(Game* game, int direction);
 
 void end_turn(Game* game) {
     player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
@@ -31,9 +32,9 @@ void UpdateGame(Game* game, bool* should_close) {
                     init_player_deck(&game->inner_game.players[0], (CharacterType)i);
                     init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
                     
-                    // [MODIFIED] Set initial positions after character selection
-                    game->inner_game.players[0].locate[0] = 6; // Player starts on the right of center
-                    game->inner_game.players[1].locate[0] = 4; // Bot starts on the left of center
+                    // Set initial positions
+                    game->inner_game.players[0].locate[0] = 6;
+                    game->inner_game.players[1].locate[0] = 4;
 
                     start_turn(game);
                     return;
@@ -55,17 +56,27 @@ void UpdateGame(Game* game, bool* should_close) {
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
                 Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
                  if (CheckCollisionPointRec(GetMousePosition(), card_bounds)) {
-                    card_bounds.y -= 20; // Hover effect
+                    card_bounds.y -= 20;
                 }
                 if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     apply_card_effect(game, i);
                     break;
                 }
             }
-            
             Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), end_turn_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 end_turn(game);
+            }
+            break;
+        }
+        case GAME_STATE_CHOOSE_MOVE_DIRECTION: {
+            Rectangle leftBtn = {480, 350, 120, 50};
+            Rectangle rightBtn = {680, 350, 120, 50};
+            if (CheckCollisionPointRec(GetMousePosition(), leftBtn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                apply_movement(game, -1); // -1 for Left
+            }
+            if (CheckCollisionPointRec(GetMousePosition(), rightBtn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                apply_movement(game, 1);  // 1 for Right
             }
             break;
         }
@@ -96,9 +107,12 @@ void UpdateGame(Game* game, bool* should_close) {
 
 void init_player_deck(player* p, CharacterType character) {
     p->character = character; p->deck = initVector(); p->hand = initVector(); p->graveyard = initVector(); p->life = 20; p->defense = 0; p->energy = 0;
+    
     for(int k=0; k<5; ++k) pushbackVector(&p->deck, 101);
     for(int k=0; k<2; ++k) pushbackVector(&p->deck, 201);
     for(int k=0; k<3; ++k) pushbackVector(&p->deck, 401);
+    for(int k=0; k<2; ++k) pushbackVector(&p->deck, 301); // Add move cards
+
     switch(character) {
         case RED_HOOD: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 501); break;
         case SNOW_WHITE: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 502); break;
@@ -164,6 +178,29 @@ void draw_card(player* p) {
     }
 }
 
+void apply_movement(Game* game, int direction) {
+    int player_id = game->inner_game.now_turn_player_id;
+    player* mover = &game->inner_game.players[player_id];
+    player* opponent = &game->inner_game.players[(player_id + 1) % 2];
+    
+    int current_pos = mover->locate[0];
+    int opponent_pos = opponent->locate[0];
+    int move_dist = game->pending_move_distance;
+
+    int target_pos = current_pos + (direction * move_dist);
+
+    if (target_pos < 0) target_pos = 0;
+    if (target_pos > 10) target_pos = 10;
+
+    if (target_pos == opponent_pos) {
+        target_pos -= direction;
+    }
+
+    mover->locate[0] = target_pos;
+    game->current_state = GAME_STATE_HUMAN_TURN;
+    game->message = "You moved!";
+}
+
 void apply_card_effect(Game* game, int card_hand_index) {
     int player_id = game->inner_game.now_turn_player_id;
     player* attacker = &game->inner_game.players[player_id];
@@ -174,7 +211,7 @@ void apply_card_effect(Game* game, int card_hand_index) {
 
     CardType type = card->type;
 
-    if (type == ATTACK || type == DEFENSE || type == MOVE || type == GENERIC) {
+    if (type == ATTACK || type == DEFENSE || type == GENERIC) {
         attacker->energy += card->value;
         if(type == ATTACK) {
              int damage = card->value;
@@ -188,6 +225,11 @@ void apply_card_effect(Game* game, int card_hand_index) {
         } else if (type == DEFENSE) {
             attacker->defense += card->value;
         }
+    } else if (type == MOVE) {
+        attacker->energy += card->value;
+        game->pending_move_distance = card->value;
+        game->current_state = GAME_STATE_CHOOSE_MOVE_DIRECTION;
+        game->message = "Choose a direction to move";
     } else if (type == SKILL) {
         if (attacker->energy < card->cost) {
             game->message = "Not enough energy for this skill!";
