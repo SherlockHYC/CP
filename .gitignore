@@ -15,4 +15,4 @@ my_program
 
 # 忽略 build 或 bin 這些通常用來存放編譯結果的資料夾
 build/
-bin/
+bin/TwistedFablesGUI
