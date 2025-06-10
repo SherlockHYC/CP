@@ -7,10 +7,10 @@ extern const char* character_names[];
 extern Font font;
 extern Texture2D backgroundTexture;
 
-// Forward declaration
-void DrawFocusSelection(const Game* game);
+// Forward declarations
 void DrawShop(const Game* game);
-void DrawBattlefield(const Game* game);
+void DrawFocusSelection(const Game* game);
+void DrawBattleInterface(const Game* game);
 void DrawGameBoard(const Game* game);
 void DrawCharSelection(void);
 void DrawPlayerInfo(const Game* game, bool is_human);
@@ -38,6 +38,7 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
         else if (card->type == DEFENSE) DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, DARKGREEN);
         else if (card->type == SKILL) DrawTextEx(font, "Skill", (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, BLUE);
         else if (card->type == MOVE) DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, PURPLE);
+        
         if (card->type == ATTACK || card->type == DEFENSE || card->type == MOVE || card->type == GENERIC) {
              DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
         } else if (card->type == SKILL) {
@@ -93,15 +94,14 @@ void DrawGameBoard(const Game* game) {
     float gameplay_area_w = gameplay_slots * (slot_w + spacing) - spacing;
     float start_x = (screenWidth - gameplay_area_w) / 2.0f;
     
-    float screen_center_y = screenHeight / 2.0f;
-    float board_offset_y = 40.0f;
-    float mid_y = screen_center_y - (slot_h / 2.0f) + board_offset_y;
-
+    // [FIX] Recalculate Y positions for correct vertical alignment
+    float mid_y = screenHeight / 2.0f - (slot_h / 2.0f);
     const float circle_radius = 35.0f;
-    const float vertical_gap = 95.0f;
-    float top_row_y = screen_center_y - vertical_gap + board_offset_y;
-    float bottom_row_y = screen_center_y + vertical_gap + board_offset_y;
+    const float vertical_gap = 45.0f; // Gap between edge of circle and edge of slot
+    float top_row_y = mid_y - circle_radius - vertical_gap;
+    float bottom_row_y = mid_y + slot_h + circle_radius + vertical_gap;
 
+    // --- Draw circles FIRST ---
     for (int i = 0; i < gameplay_slots; i++) {
         float current_x = start_x + i * (slot_w + spacing);
         float circle_center_x = current_x + (slot_w / 2.0f);
@@ -127,6 +127,7 @@ void DrawGameBoard(const Game* game) {
         }
     }
     
+    // --- Draw the middle row (Relic slots) AFTER the circles ---
     for (int i = 0; i < gameplay_slots; i++) {
         float current_x = start_x + i * (slot_w + spacing);
         Rectangle card_slot = {current_x, mid_y, slot_w, slot_h};
@@ -134,6 +135,7 @@ void DrawGameBoard(const Game* game) {
         DrawRectangleRoundedLinesEx(card_slot, 0.1f, 10, 2, LIME);
     }
     
+    // --- Draw the Deck and Discard piles ---
     Rectangle deck_rect = { start_x - slot_w - spacing * 3, mid_y, slot_w, slot_h };
     DrawRectangleRounded(deck_rect, 0.1f, 10, Fade(DARKBLUE, 0.8f));
     DrawRectangleRoundedLinesEx(deck_rect, 0.1f, 10, 2, SKYBLUE);
@@ -170,8 +172,8 @@ void DrawBattleInterface(const Game* game) {
     }
     
     Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
-    bool btn_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
-    DrawRectangleRec(end_turn_btn, btn_hover ? LIME : GREEN);
+    bool et_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
+    DrawRectangleRec(end_turn_btn, et_hover ? LIME : GREEN);
     DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 15 }, 20, 1, BLACK);
 
     Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
@@ -179,8 +181,44 @@ void DrawBattleInterface(const Game* game) {
     DrawRectangleRec(focus_btn, game->player_has_acted ? GRAY : (focus_hover ? YELLOW : GOLD));
     DrawTextEx(font, "Focus", (Vector2){ focus_btn.x + 60, focus_btn.y + 15 }, 20, 1, BLACK);
 
+    Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
+    bool shop_hover = CheckCollisionPointRec(GetMousePosition(), shop_btn);
+    DrawRectangleRec(shop_btn, shop_hover ? SKYBLUE : BLUE);
+    DrawTextEx(font, "Shop", (Vector2){ shop_btn.x + 65, shop_btn.y + 15 }, 20, 1, WHITE);
+
     Vector2 message_size = MeasureTextEx(font, game->message, 40, 2);
     DrawTextEx(font, game->message, (Vector2){ (GetScreenWidth() - message_size.x)/2, GetScreenHeight() / 2.0f }, 40, 2, WHITE);
+}
+
+void DrawShop(const Game* game) {
+    float screenWidth = GetScreenWidth();
+    float screenHeight = GetScreenHeight();
+    DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.85f));
+    DrawTextEx(font, "Shop", (Vector2){screenWidth / 2 - MeasureTextEx(font, "Shop", 60, 2).x / 2, 40}, 60, 2, GOLD);
+    DrawTextEx(font, TextFormat("Your Energy: %d", game->inner_game.players[0].energy), (Vector2){40, 40}, 30, 1, WHITE);
+    float startY = 120;
+    float startX = 100;
+    float card_gap_x = CARD_WIDTH + 20;
+    float card_gap_y = CARD_HEIGHT + 40;
+    for (int type = 0; type < 3; type++) {
+        for (int level = 0; level < 3; level++) {
+            const vector* pile = &game->shop_piles[type][level];
+            if (pile->SIZE > 0) {
+                const Card* card = get_card_info(pile->array[0]);
+                if(card) {
+                    Rectangle bounds = {startX + level * card_gap_x, startY + type * card_gap_y, CARD_WIDTH, CARD_HEIGHT};
+                    bool hovered = CheckCollisionPointRec(GetMousePosition(), bounds);
+                    DrawCard(card, bounds, hovered, false);
+                    DrawText(TextFormat("Cost: %d", card->cost), bounds.x + 15, bounds.y + CARD_HEIGHT + 5, 20, WHITE);
+                    DrawText(TextFormat("Left: %d", pile->SIZE), bounds.x + 15, bounds.y + CARD_HEIGHT + 25, 20, WHITE);
+                }
+            }
+        }
+    }
+    Rectangle close_btn = { screenWidth - 160, screenHeight - 70, 140, 50 };
+    bool hover = CheckCollisionPointRec(GetMousePosition(), close_btn);
+    DrawRectangleRec(close_btn, hover ? RED : MAROON);
+    DrawTextEx(font, "Close", (Vector2){close_btn.x + 40, close_btn.y + 15}, 20, 1, WHITE);
 }
 
 void DrawFocusSelection(const Game* game) {
@@ -213,21 +251,14 @@ void DrawFocusSelection(const Game* game) {
 }
 
 void DrawGame(Game* game) {
-    DrawTexture(backgroundTexture, 0, 0, WHITE);
     if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
         DrawCharSelection();
     } else {
-        if (game->current_state == GAME_STATE_FOCUS_REMOVE) {
-            DrawGameBoard(game);
-            DrawPlayerInfo(game, true);
-            DrawPlayerInfo(game, false);
-            DrawFocusSelection(game);
-        } else {
-            DrawGameBoard(game);
-            DrawPlayerInfo(game, true);
-            DrawPlayerInfo(game, false);
-            DrawBattleInterface(game);
-        }
+        DrawTexture(backgroundTexture, 0, 0, WHITE);
+        DrawGameBoard(game);
+        DrawPlayerInfo(game, true);
+        DrawPlayerInfo(game, false);
+        DrawBattleInterface(game);
         
         if (game->current_state == GAME_STATE_CHOOSE_MOVE_DIRECTION) {
             DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.5f));
@@ -238,6 +269,14 @@ void DrawGame(Game* game) {
             DrawText("Left", leftBtn.x + 35, leftBtn.y + 15, 20, WHITE);
             DrawRectangleRec(rightBtn, CheckCollisionPointRec(GetMousePosition(), rightBtn) ? SKYBLUE : BLUE);
             DrawText("Right", rightBtn.x + 30, rightBtn.y + 15, 20, WHITE);
+        }
+        
+        if (game->current_state == GAME_STATE_SHOP) {
+            DrawShop(game);
+        }
+        
+        if (game->current_state == GAME_STATE_FOCUS_REMOVE) {
+            DrawFocusSelection(game);
         }
         
         if (game->current_state == GAME_STATE_GAME_OVER) {
