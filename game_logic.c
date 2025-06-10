@@ -13,24 +13,26 @@ void start_turn(Game* game);
 void init_player_deck(player* p, CharacterType character);
 void apply_card_effect(Game* game, int card_hand_index);
 void apply_movement(Game* game, int direction);
+void apply_buy_card(Game* game, int card_id);
 
+// [MODIFIED] This function now correctly discards the hand at the end of a turn.
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
 
-    // 1. Move all cards from hand to graveyard.
+    // 1. Move all cards from the current hand to the graveyard.
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         pushbackVector(&p->graveyard, p->hand.array[i]);
     }
-    // 2. Clear the hand.
+    
+    // 2. Clear the hand vector.
     clearVector(&p->hand);
 
-    // 3. Reset stats for the end of the turn.
+    // 3. Reset turn-based stats.
     p->energy = 0;
-    // [MODIFIED] Defense is no longer reset at the end of the turn.
-    // p->defense = 0; 
+    p->defense = 0;
     
-    // 4. Switch to the next player.
+    // 4. Switch to the next player and start their turn.
     game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
@@ -54,7 +56,7 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle exit_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 *should_close = true;
-                return;
+                return; 
             }
             break;
         }
@@ -68,6 +70,13 @@ void UpdateGame(Game* game, bool* should_close) {
                 } else {
                     game->message = "Focus must be your first action!";
                 }
+            }
+            
+            Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
+            if (CheckCollisionPointRec(GetMousePosition(), shop_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                game->current_state = GAME_STATE_SHOP;
+                game->message = "Shop";
+                return;
             }
 
             player* human = &game->inner_game.players[0];
@@ -89,6 +98,35 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), end_turn_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 end_turn(game);
+            }
+            break;
+        }
+        case GAME_STATE_SHOP: {
+            float startY = 120;
+            float startX = 100;
+            float card_gap_x = CARD_WIDTH + 20;
+            float card_gap_y = CARD_HEIGHT + 40;
+
+            for (int type = 0; type < 3; type++) {
+                for (int level = 0; level < 3; level++) {
+                    const vector* pile = &game->shop_piles[type][level];
+                    if (pile->SIZE > 0) {
+                        const Card* card = get_card_info(pile->array[0]);
+                        if(card) {
+                            Rectangle bounds = {startX + level * card_gap_x, startY + type * card_gap_y, CARD_WIDTH, CARD_HEIGHT};
+                            if (CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                                apply_buy_card(game, card->id);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Rectangle close_btn = { GetScreenWidth() - 160, GetScreenHeight() - 70, 140, 50 };
+            if(CheckCollisionPointRec(GetMousePosition(), close_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
+                game->current_state = GAME_STATE_HUMAN_TURN;
+                game->message = "Your Turn!";
             }
             break;
         }
@@ -137,14 +175,10 @@ void init_player_deck(player* p, CharacterType character) {
     p->defense = 0; 
     p->energy = 0;
     
-    // 3x Level 1 Attack
     for(int k=0; k<3; ++k) pushbackVector(&p->deck, 101);
-    // 3x Level 1 Defense
     for(int k=0; k<3; ++k) pushbackVector(&p->deck, 201);
-    // 3x Level 1 Move
     for(int k=0; k<3; ++k) pushbackVector(&p->deck, 301);
 
-    // 3x Character-specific Level 1 Skill
     switch(character) {
         case RED_HOOD: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 501); break;
         case SNOW_WHITE: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 502); break;
@@ -164,7 +198,6 @@ void start_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
     
-    // [MODIFIED] Defense is now reset at the START of the player's turn.
     p->defense = 0;
     game->player_has_acted = false;
     
@@ -186,6 +219,24 @@ void InitGame(Game* game) {
     memset(game, 0, sizeof(Game));
     game->current_state = GAME_STATE_CHOOSE_CHAR;
     game->message = "Select Your Hero";
+
+    for(int i=0; i<3; ++i) for(int j=0; j<3; ++j) game->shop_piles[i][j] = initVector();
+
+    for(int i=0; i<6; ++i) {
+        pushbackVector(&game->shop_piles[0][0], 101); 
+        pushbackVector(&game->shop_piles[1][0], 201); 
+        pushbackVector(&game->shop_piles[2][0], 301); 
+    }
+    for(int i=0; i<9; ++i) {
+        pushbackVector(&game->shop_piles[0][1], 102);
+        pushbackVector(&game->shop_piles[1][1], 202);
+        pushbackVector(&game->shop_piles[2][1], 302);
+    }
+    for(int i=0; i<9; ++i) {
+        pushbackVector(&game->shop_piles[0][2], 103);
+        pushbackVector(&game->shop_piles[1][2], 203);
+        pushbackVector(&game->shop_piles[2][2], 303);
+    }
 }
 
 void shuffle_deck(vector* deck) {
@@ -286,4 +337,39 @@ void apply_card_effect(Game* game, int card_hand_index) {
     
     pushbackVector(&attacker->graveyard, played_card_id);
     eraseVector(&attacker->hand, card_hand_index);
+}
+
+void apply_buy_card(Game* game, int card_id) {
+    player* buyer = &game->inner_game.players[game->inner_game.now_turn_player_id];
+    const Card* card_to_buy = get_card_info(card_id);
+
+    if (!card_to_buy) return;
+
+    if (buyer->energy < card_to_buy->cost) {
+        game->message = "Not enough energy!";
+        return;
+    }
+
+    bool found_in_supply = false;
+    for(int type=0; type < 3; ++type) {
+        for(int lvl=0; lvl<3; ++lvl) {
+            vector* pile = &game->shop_piles[type][lvl];
+            if(pile->SIZE > 0 && pile->array[0] == card_id) {
+                popbackVector(pile);
+                found_in_supply = true;
+                break;
+            }
+        }
+        if(found_in_supply) break;
+    }
+    
+    if(!found_in_supply) {
+        game->message = "This card is sold out!";
+        return;
+    }
+
+    buyer->energy -= card_to_buy->cost;
+    pushbackVector(&buyer->graveyard, card_id);
+    game->message = TextFormat("Bought %s!", card_to_buy->name);
+    game->player_has_acted = true;
 }

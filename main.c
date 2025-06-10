@@ -3,6 +3,7 @@
 #include "gui.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h> // Required for malloc and free
 
 // Global variables
 Font font;
@@ -19,7 +20,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    // [MODIFIED] Increased window height for a better layout
+    // --- Window Initialization ---
     const int screenWidth = 1280;
     const int screenHeight = 800;
     InitWindow(screenWidth, screenHeight, "Twisted Fables - GUI Edition");
@@ -34,21 +35,33 @@ int main(int argc, char *argv[])
     
     SetTargetFPS(60);
 
-    Game game;
-    InitGame(&game);
+    // --- [FIX] Allocate Game struct on the heap to prevent stack overflow ---
+    Game *game = (Game*)malloc(sizeof(Game));
+    if (game == NULL) {
+        printf("FATAL ERROR: Failed to allocate memory for the game.\n");
+        CloseWindow();
+        return 1;
+    }
+    
+    InitGame(game);
 
     bool should_exit = false; 
     
+    // --- Game Loop ---
     while (!should_exit && !WindowShouldClose())
     {
-        UpdateGame(&game, &should_exit);
+        // 1. Update game state (passing the pointer to the game struct)
+        UpdateGame(game, &should_exit);
         
+        // 2. Draw everything
         BeginDrawing();
         ClearBackground(DARKGRAY);
-        DrawGame(&game);
+        DrawGame(game); // Pass the pointer
         EndDrawing();
     }
 
+    // --- Cleanup ---
+    free(game); // Free the allocated memory for the game struct
     UnloadTexture(backgroundTexture);
     CloseWindow();
 
@@ -64,7 +77,7 @@ void show_help() {
     printf("  ./TwistedFablesGUI --help  : Shows this help message.\n\n");
     printf("== HOW TO PLAY ==\n");
     printf("  1. Select your hero using the mouse.\n");
-    printf("  2. On your turn, click cards in your hand to play them (requires energy).\n");
+    printf("  2. On your turn, click cards in your hand to play them.\n");
     printf("  3. Click the 'End Turn' button when you are finished with your actions.\n\n");
     printf("Have fun!\n\n");
 }
