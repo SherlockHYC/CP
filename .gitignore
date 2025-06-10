@@ -11,7 +11,7 @@
 
 # 忽略 macOS 和 Linux 的執行檔 (通常沒有副檔名)
 # 假設你的執行檔叫做 my_program
-my_program
+TwistFablesGUI
 
 # 忽略 build 或 bin 這些通常用來存放編譯結果的資料夾
 build/
