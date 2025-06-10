@@ -12,7 +12,7 @@ typedef enum {
     GAME_STATE_GAME_OVER,
     GAME_STATE_SHOP, 
     GAME_STATE_CHOOSE_MOVE_DIRECTION,
-    GAME_STATE_FOCUS_REMOVE // [NEW] State for selecting a card to remove with Focus
+    GAME_STATE_FOCUS_REMOVE
 } GameState;
 
 // Main Game Struct
@@ -25,6 +25,7 @@ typedef struct Game {
 
     vector shop_piles[3][3];
     int pending_move_distance; 
+    int turn_count; // [NEW] To track the number of turns
 } Game;
 
 // Function Prototypes

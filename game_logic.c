@@ -226,15 +226,19 @@ void init_player_deck(player* p, CharacterType character) {
 }
 
 void start_turn(Game* game) {
+    game->turn_count++;
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
     
     p->defense = 0;
     game->player_has_acted = false;
     
-    while(p->hand.SIZE < 6) {
+    // [FIX] Cast target_hand_size to uint32_t to match p->hand.SIZE type.
+    int target_hand_size = (game->turn_count == 1 && player_id == 0) ? 4 : 6;
+    while(p->hand.SIZE < (uint32_t)target_hand_size) {
         draw_card(p);
     }
+
     if (player_id == 0) {
         game->current_state = GAME_STATE_HUMAN_TURN;
         game->message = "Your Turn!";
@@ -250,6 +254,7 @@ void InitGame(Game* game) {
     memset(game, 0, sizeof(Game));
     game->current_state = GAME_STATE_CHOOSE_CHAR;
     game->message = "Select Your Hero";
+    game->turn_count = 0;
 
     for(int i=0; i<3; ++i) for(int j=0; j<3; ++j) game->shop_piles[i][j] = initVector();
 
