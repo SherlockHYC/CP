@@ -8,9 +8,10 @@
 typedef enum {
     GAME_STATE_CHOOSE_CHAR,
     GAME_STATE_HUMAN_TURN,
-    GAME_STATE_CHOOSE_MOVE_DIRECTION, // New state for choosing move direction
     GAME_STATE_BOT_TURN,
-    GAME_STATE_GAME_OVER
+    GAME_STATE_GAME_OVER,
+    GAME_STATE_SHOP, 
+    GAME_STATE_CHOOSE_MOVE_DIRECTION 
 } GameState;
 
 // Main Game Struct
@@ -19,8 +20,14 @@ typedef struct Game {
     GameState current_state;
     const char* message;
     float bot_action_timer;
-    bool player_has_acted;      // Flag to track if the player has acted this turn
-    int pending_move_distance;  // Stores the distance for the pending move
+    bool player_has_acted;
+
+    // Shop card piles: [Type][Level-1]
+    // Type 0: Attack, 1: Defense, 2: Move
+    vector shop_piles[3][3];
+
+    // [FIX] Added the missing member back
+    int pending_move_distance; 
 } Game;
 
 // Function Prototypes
