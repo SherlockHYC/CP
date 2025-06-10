@@ -2,6 +2,7 @@
 #define GAME_LOGIC_H
 
 #include "architecture.h"
+#include <stdbool.h>
 
 // GUI Game States
 typedef enum {
@@ -18,8 +19,8 @@ typedef struct Game {
     GameState current_state;
     const char* message;
     float bot_action_timer;
-    bool player_has_acted;
-    int pending_move_distance; // New: stores the distance for the pending move
+    bool player_has_acted;      // Flag to track if the player has acted this turn
+    int pending_move_distance;  // Stores the distance for the pending move
 } Game;
 
 // Function Prototypes

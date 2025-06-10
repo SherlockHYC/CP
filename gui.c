@@ -95,6 +95,7 @@ void DrawGameBoard(const Game* game) {
     float top_row_y = screen_center_y - vertical_gap + board_offset_y;
     float bottom_row_y = screen_center_y + vertical_gap + board_offset_y;
 
+
     for (int i = 0; i < gameplay_slots; i++) {
         float current_x = start_x + i * (slot_w + spacing);
         float circle_center_x = current_x + (slot_w / 2.0f);
@@ -162,11 +163,19 @@ void DrawBattleInterface(const Game* game) {
          DrawRectangleRoundedLinesEx(bot_card, 0.08f, 10, 4, BLUE);
     }
     
-    // [MODIFIED] Moved End Turn button to the bottom right
+    // --- Draw Action Buttons ---
     Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
     bool btn_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
     DrawRectangleRec(end_turn_btn, btn_hover ? LIME : GREEN);
     DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 15 }, 20, 1, BLACK);
+
+    // [NEW] Draw Focus button above End Turn
+    Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
+    bool focus_hover = CheckCollisionPointRec(GetMousePosition(), focus_btn);
+    // Gray out if player has already acted, otherwise show hover color
+    DrawRectangleRec(focus_btn, game->player_has_acted ? GRAY : (focus_hover ? YELLOW : GOLD));
+    DrawTextEx(font, "Focus", (Vector2){ focus_btn.x + 60, focus_btn.y + 15 }, 20, 1, BLACK);
+
 
     Vector2 message_size = MeasureTextEx(font, game->message, 40, 2);
     DrawTextEx(font, game->message, (Vector2){ (GetScreenWidth() - message_size.x)/2, GetScreenHeight() / 2.0f }, 40, 2, WHITE);

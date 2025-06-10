@@ -43,11 +43,25 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle exit_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 *should_close = true;
-                return;
+                return; 
             }
             break;
         }
         case GAME_STATE_HUMAN_TURN: {
+            // Handle "Focus" button click
+            Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
+            if (CheckCollisionPointRec(GetMousePosition(), focus_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                if (!game->player_has_acted) {
+                    game->message = "You chose to Focus!";
+                    // (Future logic for removing a card can go here)
+                    end_turn(game); // Focus ends the turn immediately
+                    return; 
+                } else {
+                    game->message = "Focus must be your first action!";
+                }
+            }
+
+            // Handle card clicks
             player* human = &game->inner_game.players[0];
             int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
             float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
@@ -56,13 +70,15 @@ void UpdateGame(Game* game, bool* should_close) {
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
                 Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
                  if (CheckCollisionPointRec(GetMousePosition(), card_bounds)) {
-                    card_bounds.y -= 20;
+                    // This hover effect is visual only, handled in gui.c
                 }
                 if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     apply_card_effect(game, i);
                     break;
                 }
             }
+            
+            // Handle End Turn button click
             Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), end_turn_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 end_turn(game);
@@ -73,10 +89,10 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle leftBtn = {480, 350, 120, 50};
             Rectangle rightBtn = {680, 350, 120, 50};
             if (CheckCollisionPointRec(GetMousePosition(), leftBtn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                apply_movement(game, -1); // -1 for Left
+                apply_movement(game, -1);
             }
             if (CheckCollisionPointRec(GetMousePosition(), rightBtn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                apply_movement(game, 1);  // 1 for Right
+                apply_movement(game, 1);
             }
             break;
         }
@@ -110,8 +126,8 @@ void init_player_deck(player* p, CharacterType character) {
     
     for(int k=0; k<5; ++k) pushbackVector(&p->deck, 101);
     for(int k=0; k<2; ++k) pushbackVector(&p->deck, 201);
+    for(int k=0; k<2; ++k) pushbackVector(&p->deck, 301);
     for(int k=0; k<3; ++k) pushbackVector(&p->deck, 401);
-    for(int k=0; k<2; ++k) pushbackVector(&p->deck, 301); // Add move cards
 
     switch(character) {
         case RED_HOOD: for(int k=0; k<2; ++k) pushbackVector(&p->deck, 501); break;
@@ -249,6 +265,9 @@ void apply_card_effect(Game* game, int card_hand_index) {
     }
 
     game->player_has_acted = true;
-    pushbackVector(&attacker->graveyard, card->id);
-    eraseVector(&attacker->hand, card_hand_index);
+    // Only move the card if the state didn't change to choosing a direction
+    if(game->current_state != GAME_STATE_CHOOSE_MOVE_DIRECTION){
+        pushbackVector(&attacker->graveyard, card->id);
+        eraseVector(&attacker->hand, card_hand_index);
+    }
 }
