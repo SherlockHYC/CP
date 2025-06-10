@@ -14,25 +14,18 @@ void init_player_deck(player* p, CharacterType character);
 void apply_card_effect(Game* game, int card_hand_index);
 void apply_movement(Game* game, int direction);
 void apply_buy_card(Game* game, int card_id);
+void apply_focus_remove(Game* game, int choice);
 
-// [MODIFIED] This function now correctly discards the hand at the end of a turn.
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
-
-    // 1. Move all cards from the current hand to the graveyard.
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         pushbackVector(&p->graveyard, p->hand.array[i]);
     }
-    
-    // 2. Clear the hand vector.
     clearVector(&p->hand);
-
-    // 3. Reset turn-based stats.
     p->energy = 0;
     p->defense = 0;
     
-    // 4. Switch to the next player and start their turn.
     game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
@@ -64,8 +57,8 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), focus_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 if (!game->player_has_acted) {
-                    game->message = "You chose to Focus!";
-                    end_turn(game);
+                    game->current_state = GAME_STATE_FOCUS_REMOVE;
+                    game->message = "Focus: Remove a card";
                     return;
                 } else {
                     game->message = "Focus must be your first action!";
@@ -138,6 +131,44 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             if (CheckCollisionPointRec(GetMousePosition(), rightBtn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 apply_movement(game, 1);
+            }
+            break;
+        }
+        case GAME_STATE_FOCUS_REMOVE: {
+            player* p = &game->inner_game.players[0];
+            int choice = 0;
+            bool action_taken = false;
+
+            for (uint32_t i = 0; i < p->hand.SIZE; i++) {
+                Rectangle card_bounds = { 50 + i * (CARD_WIDTH + 15), 180, CARD_WIDTH, CARD_HEIGHT };
+                if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    choice = i + 1;
+                    action_taken = true;
+                    break;
+                }
+            }
+            if (action_taken) {
+                apply_focus_remove(game, choice);
+                return;
+            }
+
+            for (uint32_t i = 0; i < p->graveyard.SIZE; i++) {
+                Rectangle card_bounds = { 50 + i * (CARD_WIDTH + 15), 430, CARD_WIDTH, CARD_HEIGHT };
+                if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    choice = -(int)(i + 1);
+                    action_taken = true;
+                    break;
+                }
+            }
+            if (action_taken) {
+                apply_focus_remove(game, choice);
+                return;
+            }
+
+            Rectangle cancel_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
+            if (CheckCollisionPointRec(GetMousePosition(), cancel_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                game->current_state = GAME_STATE_HUMAN_TURN;
+                game->message = "Your Turn!";
             }
             break;
         }
@@ -372,4 +403,18 @@ void apply_buy_card(Game* game, int card_id) {
     pushbackVector(&buyer->graveyard, card_id);
     game->message = TextFormat("Bought %s!", card_to_buy->name);
     game->player_has_acted = true;
+}
+
+void apply_focus_remove(Game* game, int choice) {
+    player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
+    if (choice > 0 && choice <= (int)p->hand.SIZE) {
+        eraseVector(&p->hand, choice - 1);
+        game->message = "Card removed from hand.";
+    } else if (choice < 0 && -choice <= (int)p->graveyard.SIZE) {
+        eraseVector(&p->graveyard, -choice - 1);
+        game->message = "Card removed from graveyard.";
+    } else {
+        game->message = "Invalid selection.";
+    }
+    end_turn(game);
 }
