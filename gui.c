@@ -80,23 +80,19 @@ void DrawGameBoard(const Game* game) {
     float gameplay_area_w = gameplay_slots * (slot_w + spacing) - spacing;
     float start_x = (screenWidth - gameplay_area_w) / 2.0f;
     
-    // [FIX] Recalculate all Y positions based on the screen center and a vertical offset
     float screen_center_y = screenHeight / 2.0f;
-    float board_offset_y = 40.0f; // This value shifts the entire board down
+    float board_offset_y = 40.0f;
     float mid_y = screen_center_y - (slot_h / 2.0f) + board_offset_y;
 
     const float circle_radius = 35.0f;
-    const float vertical_gap = 95.0f; // Gap between center of mid row and center of circle rows
+    const float vertical_gap = 95.0f;
     float top_row_y = screen_center_y - vertical_gap + board_offset_y;
     float bottom_row_y = screen_center_y + vertical_gap + board_offset_y;
 
-
-    // --- Draw circles FIRST ---
     for (int i = 0; i < gameplay_slots; i++) {
         float current_x = start_x + i * (slot_w + spacing);
         float circle_center_x = current_x + (slot_w / 2.0f);
         Color color = (i == 2 || i == 8) ? Fade(LIME, 0.7f) : Fade(DARKGRAY, 0.7f);
-        // [MODIFIED] Only the middle circle (index 5) has a thick border
         float thickness = (i == 5) ? 5.0f : 3.0f;
 
         Vector2 top_center = { circle_center_x, top_row_y };
@@ -108,9 +104,17 @@ void DrawGameBoard(const Game* game) {
         DrawCircleV(bottom_center, circle_radius, color);
         DrawCircleLinesV(bottom_center, circle_radius, BLACK);
         if(i == 5) DrawRing(bottom_center, circle_radius - thickness, circle_radius, 0, 360, 36, BLACK);
+        
+        // [MODIFIED] Draw player tokens on the bottom row
+        for(int p_idx = 0; p_idx < 2; p_idx++){
+            if(game->inner_game.players[p_idx].locate[0] == i) {
+                Color token_color = (p_idx == 0) ? BLUE : RED;
+                DrawCircleV(bottom_center, circle_radius * 0.6f, token_color);
+                DrawCircleLines(bottom_center.x, bottom_center.y, circle_radius * 0.6f, BLACK);
+            }
+        }
     }
     
-    // --- Draw the middle row (Relic slots) AFTER the circles ---
     for (int i = 0; i < gameplay_slots; i++) {
         float current_x = start_x + i * (slot_w + spacing);
         Rectangle card_slot = {current_x, mid_y, slot_w, slot_h};
@@ -118,7 +122,6 @@ void DrawGameBoard(const Game* game) {
         DrawRectangleRoundedLinesEx(card_slot, 0.1f, 10, 2, LIME);
     }
     
-    // --- Draw the Deck and Discard piles ---
     Rectangle deck_rect = { start_x - slot_w - spacing * 3, mid_y, slot_w, slot_h };
     DrawRectangleRounded(deck_rect, 0.1f, 10, Fade(DARKBLUE, 0.8f));
     DrawRectangleRoundedLinesEx(deck_rect, 0.1f, 10, 2, SKYBLUE);
@@ -154,11 +157,10 @@ void DrawBattleInterface(const Game* game) {
          DrawRectangleRoundedLinesEx(bot_card, 0.08f, 10, 4, BLUE);
     }
     
-    // [MODIFIED] Moved End Turn button to the bottom right
-    Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
+    Rectangle end_turn_btn = { (float)GetScreenWidth() / 2.0f - 90, GetScreenHeight() - 50, 180, 40 };
     bool btn_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
     DrawRectangleRec(end_turn_btn, btn_hover ? LIME : GREEN);
-    DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 15 }, 20, 1, BLACK);
+    DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 10 }, 24, 1, BLACK);
 
     Vector2 message_size = MeasureTextEx(font, game->message, 40, 2);
     DrawTextEx(font, game->message, (Vector2){ (GetScreenWidth() - message_size.x)/2, GetScreenHeight() / 2.0f }, 40, 2, WHITE);

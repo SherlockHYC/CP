@@ -30,6 +30,11 @@ void UpdateGame(Game* game, bool* should_close) {
                 if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     init_player_deck(&game->inner_game.players[0], (CharacterType)i);
                     init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
+                    
+                    // [MODIFIED] Set initial positions after character selection
+                    game->inner_game.players[0].locate[0] = 6; // Player starts on the right of center
+                    game->inner_game.players[1].locate[0] = 4; // Bot starts on the left of center
+
                     start_turn(game);
                     return;
                 }
@@ -58,7 +63,6 @@ void UpdateGame(Game* game, bool* should_close) {
                 }
             }
             
-            // [MODIFIED] Update End Turn button coordinates to match the GUI
             Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), end_turn_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 end_turn(game);
