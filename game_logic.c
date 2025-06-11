@@ -19,20 +19,13 @@ void apply_focus_remove(Game* game, int choice);
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
-
-    // 1. Move all cards from the current hand to the graveyard.
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         pushbackVector(&p->graveyard, p->hand.array[i]);
     }
-    
-    // 2. Clear the hand vector.
     clearVector(&p->hand);
-
-    // 3. Reset turn-based stats.
     p->energy = 0;
     p->defense = 0;
     
-    // 4. Switch to the next player and start their turn.
     game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
@@ -177,6 +170,13 @@ void UpdateGame(Game* game, bool* should_close) {
                 game->current_state = GAME_STATE_HUMAN_TURN;
                 game->message = "Your Turn!";
             }
+            break;
+        }
+        // [FIX] Added missing case to handle the enumeration value and resolve the warning.
+        case GAME_STATE_AWAITING_BASIC_FOR_SKILL: {
+            // This state is not currently used by the active game logic,
+            // but the case is required to prevent compiler warnings.
+            // We can add logic here in the future if we re-implement the feature.
             break;
         }
         case GAME_STATE_BOT_TURN: {
@@ -388,7 +388,7 @@ void apply_buy_card(Game* game, int card_id) {
     if (!card_to_buy) return;
 
     if (buyer->energy < card_to_buy->cost) {
-        // game->message = "Not enough energy!";
+        game->message = "Not enough energy!";
         return;
     }
 
@@ -412,7 +412,7 @@ void apply_buy_card(Game* game, int card_id) {
 
     buyer->energy -= card_to_buy->cost;
     pushbackVector(&buyer->graveyard, card_id);
-    // game->message = TextFormat("Bought %s!", card_to_buy->name);
+    game->message = TextFormat("Bought %s!", card_to_buy->name);
     game->player_has_acted = true;
 }
 
