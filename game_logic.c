@@ -120,7 +120,6 @@ void UpdateGame(Game* game, bool* should_close) {
                 game->shop_page = 1;
             }
 
-            // [修正] 商店點擊邏輯的排版計算，必須與 gui.c 中的繪製排版完全一致
             if (game->shop_page == 0) {
                 float column_width = 300; 
                 float startX = (GetScreenWidth() - (3 * column_width)) / 2.0f;
@@ -208,20 +207,41 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
+        // [修改] 更新等待基礎牌的邏輯
         case GAME_STATE_AWAITING_BASIC_FOR_SKILL: {
             player* human = &game->inner_game.players[0];
+
+            // 從已選擇的技能牌，判斷出需要的基礎牌類型
+            const Card* pending_skill_card = get_card_info(human->hand.array[game->pending_skill_card_index]);
+            if (!pending_skill_card) break; // 安全檢查
+
+            CardType required_type;
+            switch (pending_skill_card->id % 10) {
+                case 1: required_type = ATTACK; break;
+                case 2: required_type = DEFENSE; break;
+                case 3: required_type = MOVE; break;
+                default: required_type = GENERIC; break; // 無效類型
+            }
+
+            // 更新提示訊息
+            if (required_type == ATTACK) game->message = "Select an Attack card to use.";
+            else if (required_type == DEFENSE) game->message = "Select a Defense card to use.";
+            else if (required_type == MOVE) game->message = "Select a Move card to use.";
+
             int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
             float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
             float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
 
+            // 檢查玩家點擊
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
+                // 跳過技能牌本身
                 if ((int)i == game->pending_skill_card_index) continue;
 
-                const Card* card_info = get_card_info(human->hand.array[i]);
-                if (!card_info) continue;
+                const Card* card_to_check = get_card_info(human->hand.array[i]);
+                if (!card_to_check) continue;
 
-                bool is_basic = (card_info->type == ATTACK || card_info->type == DEFENSE || card_info->type == MOVE);
-                if (is_basic) {
+                // 檢查卡牌類型是否符合要求
+                if (card_to_check->type == required_type) {
                     Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
                     if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                         resolve_skill_and_basic(game, game->pending_skill_card_index, i);
@@ -230,6 +250,7 @@ void UpdateGame(Game* game, bool* should_close) {
                 }
             }
             
+            // 檢查取消按鈕
             Rectangle cancel_btn = { GetScreenWidth() / 2.0f - 100, GetScreenHeight() / 2.0f + 50, 200, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), cancel_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 game->current_state = GAME_STATE_HUMAN_TURN;
