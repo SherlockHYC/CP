@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-// Function Prototypes
+// 函式原型
 void shuffle_deck(vector* deck);
 void draw_card(player* p);
 void start_turn(Game* game);
@@ -15,21 +15,32 @@ void apply_card_effect(Game* game, int card_hand_index);
 void apply_movement(Game* game, int direction);
 void apply_buy_card(Game* game, int card_id);
 void apply_focus_remove(Game* game, int choice);
+void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx);
 
+
+// end_turn 函式 - 保持不變
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
+    
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         pushbackVector(&p->graveyard, p->hand.array[i]);
     }
     clearVector(&p->hand);
+    
     p->energy = 0;
     p->defense = 0;
+    
+    int target_hand_size = 6;
+    while(p->hand.SIZE < (uint32_t)target_hand_size) {
+        draw_card(p);
+    }
     
     game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
 
+// [修改] UpdateGame 函式，加入商店分頁的處理邏輯
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
         case GAME_STATE_CHOOSE_CHAR: {
@@ -40,26 +51,35 @@ void UpdateGame(Game* game, bool* should_close) {
             const float ROW_GAP = 200.0f;
             const float COL_GAP = 180.0f;
 
-        for (int i = 0; i < 10; i++) {
-            int row = i / 5;
-            float extra_y = (row == 1) ? 40.0f : 0.0f;
+            for (int i = 0; i < 10; i++) {
+                int row = i / 5;
+                float extra_y = (row == 1) ? 40.0f : 0.0f;
 
-            Rectangle btn_bounds = {
-                CARD_BTN_X + (i % 5) * COL_GAP,
-                CARD_BTN_Y + row * ROW_GAP + extra_y,
-                CARD_BTN_W,
-                CARD_BTN_H
-            };
+                Rectangle btn_bounds = {
+                    CARD_BTN_X + (i % 5) * COL_GAP,
+                    CARD_BTN_Y + row * ROW_GAP + extra_y,
+                    CARD_BTN_W,
+                    CARD_BTN_H
+                };
 
-            if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                init_player_deck(&game->inner_game.players[0], (CharacterType)i);
-                init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
-                game->inner_game.players[0].locate[0] = 6;
-                game->inner_game.players[1].locate[0] = 4;
-                start_turn(game);
-                return;
+                if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    init_player_deck(&game->inner_game.players[0], (CharacterType)i);
+                    init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
+                    game->inner_game.players[0].locate[0] = 6;
+                    game->inner_game.players[1].locate[0] = 4;
+
+                    // ✅ 合併進來的補牌邏輯
+                    player* p0 = &game->inner_game.players[0];
+                    while(p0->hand.SIZE < 4) { draw_card(p0); }
+
+                    player* p1 = &game->inner_game.players[1];
+                    while(p1->hand.SIZE < 6) { draw_card(p1); }
+
+                    start_turn(game);
+                    return;
+                }
             }
-        }
+
             Rectangle exit_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 *should_close = true;
@@ -82,7 +102,7 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), shop_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 game->current_state = GAME_STATE_SHOP;
-                game->message = "Shop";
+                game->message = "Shop"; // 進入商店時的暫時訊息
                 return;
             }
 
@@ -109,27 +129,41 @@ void UpdateGame(Game* game, bool* should_close) {
             break;
         }
         case GAME_STATE_SHOP: {
-            float startY = 120;
-            float startX = 100;
-            float card_gap_x = CARD_WIDTH + 20;
-            float card_gap_y = CARD_HEIGHT + 40;
+            // [新邏輯] 處理頁籤切換
+            Rectangle basic_tab = { GetScreenWidth() / 2.0f - 210, 150, 200, 40 };
+            Rectangle skill_tab = { GetScreenWidth() / 2.0f + 10, 150, 200, 40 };
+            if (CheckCollisionPointRec(GetMousePosition(), basic_tab) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                game->shop_page = 0;
+            }
+            if (CheckCollisionPointRec(GetMousePosition(), skill_tab) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                game->shop_page = 1;
+            }
 
-            for (int type = 0; type < 3; type++) {
-                for (int level = 0; level < 3; level++) {
-                    const vector* pile = &game->shop_piles[type][level];
-                    if (pile->SIZE > 0) {
-                        const Card* card = get_card_info(pile->array[0]);
-                        if(card) {
-                            Rectangle bounds = {startX + level * card_gap_x, startY + type * card_gap_y, CARD_WIDTH, CARD_HEIGHT};
-                            if (CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                                apply_buy_card(game, card->id);
-                                return;
+            // [新邏輯] 只在基礎牌頁面處理購買邏輯
+            if (game->shop_page == 0) {
+                float startY = 220;
+                float startX = 100;
+                float card_gap_x = CARD_WIDTH + 20;
+                float card_gap_y = CARD_HEIGHT + 60;
+
+                for (int type = 0; type < 3; type++) {
+                    for (int level = 0; level < 3; level++) {
+                        const vector* pile = &game->shop_piles[type][level];
+                        if (pile->SIZE > 0) {
+                            const Card* card = get_card_info(pile->array[0]);
+                            if(card) {
+                                Rectangle bounds = {startX + level * card_gap_x, startY + type * card_gap_y, CARD_WIDTH, CARD_HEIGHT};
+                                if (CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                                    apply_buy_card(game, card->id);
+                                    return;
+                                }
                             }
                         }
                     }
                 }
             }
             
+            // 關閉商店按鈕
             Rectangle close_btn = { GetScreenWidth() - 160, GetScreenHeight() - 70, 140, 50 };
             if(CheckCollisionPointRec(GetMousePosition(), close_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
                 game->current_state = GAME_STATE_HUMAN_TURN;
@@ -187,6 +221,33 @@ void UpdateGame(Game* game, bool* should_close) {
             break;
         }
         case GAME_STATE_AWAITING_BASIC_FOR_SKILL: {
+            player* human = &game->inner_game.players[0];
+            int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
+            float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
+            float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
+
+            for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
+                if ((int)i == game->pending_skill_card_index) continue;
+
+                const Card* card_info = get_card_info(human->hand.array[i]);
+                if (!card_info) continue;
+
+                bool is_basic = (card_info->type == ATTACK || card_info->type == DEFENSE || card_info->type == MOVE);
+                if (is_basic) {
+                    Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
+                    if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                        resolve_skill_and_basic(game, game->pending_skill_card_index, i);
+                        return;
+                    }
+                }
+            }
+            
+            Rectangle cancel_btn = { GetScreenWidth() / 2.0f - 100, GetScreenHeight() / 2.0f + 50, 200, 50 };
+            if (CheckCollisionPointRec(GetMousePosition(), cancel_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                game->current_state = GAME_STATE_HUMAN_TURN;
+                game->message = "Your Turn!";
+                game->pending_skill_card_index = -1;
+            }
             break;
         }
         case GAME_STATE_BOT_TURN: {
@@ -194,7 +255,7 @@ void UpdateGame(Game* game, bool* should_close) {
             if (game->bot_action_timer <= 0) {
                 int card_to_play = get_bot_action(&game->inner_game);
                 if (card_to_play != -1) {
-                    apply_card_effect(game, card_to_play);
+                    // Bot AI currently does not support the new skill mechanic.
                 }
                 end_turn(game);
             }
@@ -214,6 +275,7 @@ void UpdateGame(Game* game, bool* should_close) {
     }
 }
 
+// init_player_deck 函式 - 保持不變
 void init_player_deck(player* p, CharacterType character) {
     p->character = character; 
     p->deck = initVector(); 
@@ -242,6 +304,7 @@ void init_player_deck(player* p, CharacterType character) {
     shuffle_deck(&p->deck);
 }
 
+// start_turn 函式 - 保持不變
 void start_turn(Game* game) {
     game->turn_count++;
     int player_id = game->inner_game.now_turn_player_id;
@@ -250,11 +313,6 @@ void start_turn(Game* game) {
     p->defense = 0;
     game->player_has_acted = false;
     
-    int target_hand_size = (game->turn_count == 1 && player_id == 0) ? 4 : 6;
-    while(p->hand.SIZE < (uint32_t)target_hand_size) {
-        draw_card(p);
-    }
-
     if (player_id == 0) {
         game->current_state = GAME_STATE_HUMAN_TURN;
         game->message = "Your Turn!";
@@ -265,12 +323,15 @@ void start_turn(Game* game) {
     }
 }
 
+// [修改] InitGame 函式，初始化商店頁面
 void InitGame(Game* game) {
     srand(time(NULL));
     memset(game, 0, sizeof(Game));
     game->current_state = GAME_STATE_CHOOSE_CHAR;
     game->message = "Select Your Hero";
     game->turn_count = 0;
+    game->pending_skill_card_index = -1;
+    game->shop_page = 0; // [新] 預設為基礎牌商店頁面
 
     for(int i=0; i<3; ++i) for(int j=0; j<3; ++j) game->shop_piles[i][j] = initVector();
 
@@ -291,6 +352,7 @@ void InitGame(Game* game) {
     }
 }
 
+// shuffle_deck 函式 - 保持不變
 void shuffle_deck(vector* deck) {
     if (deck->SIZE < 2) return;
     for (uint32_t i = 0; i < deck->SIZE - 1; ++i) {
@@ -301,6 +363,7 @@ void shuffle_deck(vector* deck) {
     }
 }
 
+// draw_card 函式 - 保持不變
 void draw_card(player* p) {
     if (p->deck.SIZE == 0) {
         if (p->graveyard.SIZE == 0) return;
@@ -314,6 +377,7 @@ void draw_card(player* p) {
     }
 }
 
+// apply_movement 函式 - 保持不變
 void apply_movement(Game* game, int direction) {
     int player_id = game->inner_game.now_turn_player_id;
     player* mover = &game->inner_game.players[player_id];
@@ -337,27 +401,36 @@ void apply_movement(Game* game, int direction) {
     game->message = "You moved!";
 }
 
+// apply_card_effect 函式 - 保持不變
 void apply_card_effect(Game* game, int card_hand_index) {
     int player_id = game->inner_game.now_turn_player_id;
     player* attacker = &game->inner_game.players[player_id];
-    player* defender = &game->inner_game.players[(player_id + 1) % 2];
+
     if (card_hand_index < 0 || card_hand_index >= (int)attacker->hand.SIZE) return;
     const Card* card = get_card_info(attacker->hand.array[card_hand_index]);
     if (!card) return;
 
-    int32_t played_card_id = card->id;
     CardType type = card->type;
 
+    if (type == SKILL) {
+        game->pending_skill_card_index = card_hand_index;
+        game->current_state = GAME_STATE_AWAITING_BASIC_FOR_SKILL;
+        game->message = "Select a Basic Card (ATK/DEF/MOV) to use.";
+        return;
+    }
+
+    int32_t played_card_id = card->id;
     if (type == ATTACK || type == DEFENSE || type == GENERIC) {
         attacker->energy += card->value;
         if(type == ATTACK) {
+             player* defender = &game->inner_game.players[(player_id + 1) % 2];
              int damage = card->value;
-             if(defender->defense >= damage) defender->defense -= damage;
+             if(defender->defense >= damage) { defender->defense -= damage; }
              else { 
-                int damage_left = damage - defender->defense;
-                defender->defense = 0;
-                if (defender->life <= damage_left) defender->life = 0;
-                else defender->life -= damage_left;
+                 int damage_left = damage - defender->defense;
+                 defender->defense = 0;
+                 if (defender->life <= damage_left) defender->life = 0;
+                 else defender->life -= damage_left;
              }
         } else if (type == DEFENSE) {
             attacker->defense += card->value;
@@ -367,18 +440,6 @@ void apply_card_effect(Game* game, int card_hand_index) {
         game->pending_move_distance = card->value;
         game->current_state = GAME_STATE_CHOOSE_MOVE_DIRECTION;
         game->message = "Choose a direction to move";
-    } else if (type == SKILL) {
-        // [MODIFIED] Removed the energy check and consumption for SKILL cards.
-        if(card->value > 0) {
-             int damage = card->value;
-             if(defender->defense >= damage) defender->defense -= damage;
-             else { 
-                int damage_left = damage - defender->defense;
-                defender->defense = 0;
-                if(defender->life <= damage_left) defender->life = 0;
-                else defender->life -= damage_left;
-             }
-        }
     }
 
     game->player_has_acted = true;
@@ -387,6 +448,7 @@ void apply_card_effect(Game* game, int card_hand_index) {
     eraseVector(&attacker->hand, card_hand_index);
 }
 
+// apply_buy_card 函式 - 保持不變
 void apply_buy_card(Game* game, int card_id) {
     player* buyer = &game->inner_game.players[game->inner_game.now_turn_player_id];
     const Card* card_to_buy = get_card_info(card_id);
@@ -422,6 +484,7 @@ void apply_buy_card(Game* game, int card_id) {
     game->player_has_acted = true;
 }
 
+// apply_focus_remove 函式 - 保持不變
 void apply_focus_remove(Game* game, int choice) {
     player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
     if (choice > 0 && choice <= (int)p->hand.SIZE) {
@@ -434,4 +497,46 @@ void apply_focus_remove(Game* game, int choice) {
         game->message = "Invalid selection.";
     }
     end_turn(game);
+}
+
+// resolve_skill_and_basic 函式 - 保持不變
+void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
+    player* attacker = &game->inner_game.players[0];
+    player* defender = &game->inner_game.players[1];
+    
+    const Card* skill_card = get_card_info(attacker->hand.array[skill_idx]);
+    const Card* basic_card = get_card_info(attacker->hand.array[basic_idx]);
+
+    if (!skill_card || !basic_card) return;
+
+    if (skill_card->value > 0) {
+        int damage = skill_card->value;
+        if(defender->defense >= damage) {
+            defender->defense -= damage;
+        } else { 
+            int damage_left = damage - defender->defense;
+            defender->defense = 0;
+            if(defender->life <= damage_left) defender->life = 0;
+            else defender->life -= damage_left;
+        }
+    }
+
+    int32_t skill_id = skill_card->id;
+    int32_t basic_id = basic_card->id;
+
+    if (skill_idx > basic_idx) {
+        eraseVector(&attacker->hand, skill_idx);
+        eraseVector(&attacker->hand, basic_idx);
+    } else {
+        eraseVector(&attacker->hand, basic_idx);
+        eraseVector(&attacker->hand, skill_idx);
+    }
+
+    pushbackVector(&attacker->graveyard, skill_id);
+    pushbackVector(&attacker->graveyard, basic_id);
+
+    game->player_has_acted = true;
+    game->current_state = GAME_STATE_HUMAN_TURN;
+    game->message = TextFormat("Used %s!", skill_card->name);
+    game->pending_skill_card_index = -1;
 }
