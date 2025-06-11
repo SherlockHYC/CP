@@ -21,7 +21,6 @@ void DrawSkillPairingOverlay(const Game* game);
 //                      繪製函式
 // =================================================================
 
-// DrawCard 函式 - 保持不變
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card) {
     if (is_opponent_card) {
         DrawRectangleRounded(bounds, 0.08f, 10, DARKBLUE);
@@ -35,11 +34,27 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
     DrawRectangleRoundedLinesEx(bounds, 0.08f, 10, is_hovered ? 5 : 3, is_hovered ? GOLD : BLACK);
     if (card) {
         DrawTextEx(font, card->name, (Vector2){ bounds.x + 10, bounds.y + 15 }, 18, 1, BLACK);
-        if (card->type == ATTACK) DrawTextEx(font, TextFormat("Attack: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, RED);
-        else if (card->type == DEFENSE) DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, DARKGREEN);
-        else if (card->type == SKILL) DrawTextEx(font, "Skill", (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, BLUE);
-        else if (card->type == MOVE) DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, PURPLE);
         
+        // --- 卡牌類型標籤 ---
+        if (card->type == ATTACK) {
+            DrawTextEx(font, TextFormat("Attack: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, RED);
+        } else if (card->type == DEFENSE) {
+            DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, DARKGREEN);
+        } else if (card->type == MOVE) {
+            DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, PURPLE);
+        } else if (card->type == SKILL) {
+            // [修改] 根據卡牌ID的尾數判斷技能類型
+            const char* skill_type_text = "Skill";
+            int subtype = card->id % 10;
+            switch (subtype) {
+                case 1: skill_type_text = "[ATK] Skill"; break;
+                case 2: skill_type_text = "[DEF] Skill"; break;
+                case 3: skill_type_text = "[MOV] Skill"; break;
+            }
+            DrawTextEx(font, skill_type_text, (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, BLUE);
+        }
+        
+        // --- 能量獲取標籤 ---
         if (card->type == ATTACK || card->type == DEFENSE || card->type == MOVE || card->type == GENERIC) {
              DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
         }
@@ -410,7 +425,6 @@ void DrawShop(const Game* game) {
     DrawTextEx(font, "Close", (Vector2){close_btn.x + 45, close_btn.y + 15}, 20, 1, WHITE);
 }
 
-// DrawSkillPairingOverlay 函式 - 保持不變
 void DrawSkillPairingOverlay(const Game* game) {
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
     Vector2 msg_size = MeasureTextEx(font, game->message, 30, 1);
@@ -422,6 +436,19 @@ void DrawSkillPairingOverlay(const Game* game) {
     DrawTextEx(font, "Cancel", (Vector2){ cancel_btn.x + 65, cancel_btn.y + 15 }, 20, 1, WHITE);
 
     const player* human = &game->inner_game.players[0];
+    
+    // [修改] 根據已選擇的技能牌，判斷需要高亮的基礎牌類型
+    const Card* pending_skill_card = get_card_info(human->hand.array[game->pending_skill_card_index]);
+    if (!pending_skill_card) return; // 安全檢查
+
+    CardType required_type;
+    switch (pending_skill_card->id % 10) {
+        case 1: required_type = ATTACK; break;
+        case 2: required_type = DEFENSE; break;
+        case 3: required_type = MOVE; break;
+        default: required_type = GENERIC; break; // 無效類型
+    }
+
     int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
     float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
     float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
@@ -434,8 +461,8 @@ void DrawSkillPairingOverlay(const Game* game) {
         if ((int)i == game->pending_skill_card_index) {
             DrawRectangleRoundedLinesEx(card_bounds, 0.08f, 10, 5, YELLOW);
         } else {
-            bool is_valid_basic = (card_info->type == ATTACK || card_info->type == DEFENSE || card_info->type == MOVE);
-            if (is_valid_basic) {
+            // [修改] 只高亮顯示類型相符的基礎牌
+            if (card_info->type == required_type) {
                 DrawCard(card_info, card_bounds, false, false);
                 DrawRectangleRoundedLinesEx(card_bounds, 0.08f, 10, 3, LIME);
             }

@@ -40,7 +40,6 @@ void end_turn(Game* game) {
     start_turn(game);
 }
 
-// [修改] UpdateGame 函式，加入商店分頁的處理邏輯
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
         case GAME_STATE_CHOOSE_CHAR: {
@@ -102,7 +101,7 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), shop_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 game->current_state = GAME_STATE_SHOP;
-                game->message = "Shop"; // 進入商店時的暫時訊息
+                game->message = "Shop";
                 return;
             }
 
@@ -129,7 +128,7 @@ void UpdateGame(Game* game, bool* should_close) {
             break;
         }
         case GAME_STATE_SHOP: {
-            // [新邏輯] 處理頁籤切換
+            // 處理頁籤切換
             Rectangle basic_tab = { GetScreenWidth() / 2.0f - 210, 150, 200, 40 };
             Rectangle skill_tab = { GetScreenWidth() / 2.0f + 10, 150, 200, 40 };
             if (CheckCollisionPointRec(GetMousePosition(), basic_tab) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -139,20 +138,26 @@ void UpdateGame(Game* game, bool* should_close) {
                 game->shop_page = 1;
             }
 
-            // [新邏輯] 只在基礎牌頁面處理購買邏輯
             if (game->shop_page == 0) {
-                float startY = 220;
-                float startX = 100;
-                float card_gap_x = CARD_WIDTH + 20;
-                float card_gap_y = CARD_HEIGHT + 60;
+                float column_width = 300; 
+                float startX = (GetScreenWidth() - (3 * column_width)) / 2.0f;
+                
+                float top_bound = 210;
+                float bottom_bound = GetScreenHeight() - 90;
+                float total_area_height = bottom_bound - top_bound;
+                float row_spacing = total_area_height / 3.0f;
 
                 for (int type = 0; type < 3; type++) {
+                    float row_center_y = top_bound + (row_spacing * type) + (row_spacing / 2.0f);
+                    float card_start_y = row_center_y - (CARD_HEIGHT / 2.0f);
+
                     for (int level = 0; level < 3; level++) {
                         const vector* pile = &game->shop_piles[type][level];
                         if (pile->SIZE > 0) {
                             const Card* card = get_card_info(pile->array[0]);
                             if(card) {
-                                Rectangle bounds = {startX + level * card_gap_x, startY + type * card_gap_y, CARD_WIDTH, CARD_HEIGHT};
+                                float card_start_x = startX + (level * column_width);
+                                Rectangle bounds = {card_start_x, card_start_y, CARD_WIDTH, CARD_HEIGHT};
                                 if (CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                                     apply_buy_card(game, card->id);
                                     return;
@@ -220,20 +225,41 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
+        // [修改] 更新等待基礎牌的邏輯
         case GAME_STATE_AWAITING_BASIC_FOR_SKILL: {
             player* human = &game->inner_game.players[0];
+
+            // 從已選擇的技能牌，判斷出需要的基礎牌類型
+            const Card* pending_skill_card = get_card_info(human->hand.array[game->pending_skill_card_index]);
+            if (!pending_skill_card) break; // 安全檢查
+
+            CardType required_type;
+            switch (pending_skill_card->id % 10) {
+                case 1: required_type = ATTACK; break;
+                case 2: required_type = DEFENSE; break;
+                case 3: required_type = MOVE; break;
+                default: required_type = GENERIC; break; // 無效類型
+            }
+
+            // 更新提示訊息
+            if (required_type == ATTACK) game->message = "Select an Attack card to use.";
+            else if (required_type == DEFENSE) game->message = "Select a Defense card to use.";
+            else if (required_type == MOVE) game->message = "Select a Move card to use.";
+
             int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
             float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
             float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
 
+            // 檢查玩家點擊
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
+                // 跳過技能牌本身
                 if ((int)i == game->pending_skill_card_index) continue;
 
-                const Card* card_info = get_card_info(human->hand.array[i]);
-                if (!card_info) continue;
+                const Card* card_to_check = get_card_info(human->hand.array[i]);
+                if (!card_to_check) continue;
 
-                bool is_basic = (card_info->type == ATTACK || card_info->type == DEFENSE || card_info->type == MOVE);
-                if (is_basic) {
+                // 檢查卡牌類型是否符合要求
+                if (card_to_check->type == required_type) {
                     Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
                     if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                         resolve_skill_and_basic(game, game->pending_skill_card_index, i);
@@ -242,6 +268,7 @@ void UpdateGame(Game* game, bool* should_close) {
                 }
             }
             
+            // 檢查取消按鈕
             Rectangle cancel_btn = { GetScreenWidth() / 2.0f - 100, GetScreenHeight() / 2.0f + 50, 200, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), cancel_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 game->current_state = GAME_STATE_HUMAN_TURN;
@@ -285,21 +312,63 @@ void init_player_deck(player* p, CharacterType character) {
     p->defense = 0; 
     p->energy = 0;
     
-    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 101);
-    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 201);
-    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 301);
+    // Add basic cards
+    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 101); // Attack LV1
+    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 201); // Defense LV1
+    for(int k=0; k<3; ++k) pushbackVector(&p->deck, 301); // Move LV1
 
+    // Add one of each type of skill card based on character
     switch(character) {
-        case RED_HOOD: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 501); break;
-        case SNOW_WHITE: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 502); break;
-        case SLEEPING_BEAUTY: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 503); break;
-        case ALICE: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 504); break;
-        case MULAN: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 505); break;
-        case KAGUYA: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 506); break;
-        case MERMAID: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 507); break;
-        case MATCH_GIRL: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 508); break;
-        case DOROTHY: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 509); break;
-        case SCHEHERAZADE: for(int k=0; k<3; ++k) pushbackVector(&p->deck, 510); break;
+        case RED_HOOD:
+            pushbackVector(&p->deck, 501); // ATK Skill
+            pushbackVector(&p->deck, 502); // DEF Skill
+            pushbackVector(&p->deck, 503); // MOV Skill
+            break;
+        case SNOW_WHITE:
+            pushbackVector(&p->deck, 511);
+            pushbackVector(&p->deck, 512);
+            pushbackVector(&p->deck, 513);
+            break;
+        case SLEEPING_BEAUTY:
+            pushbackVector(&p->deck, 521);
+            pushbackVector(&p->deck, 522);
+            pushbackVector(&p->deck, 523);
+            break;
+        case ALICE:
+            pushbackVector(&p->deck, 531);
+            pushbackVector(&p->deck, 532);
+            pushbackVector(&p->deck, 533);
+            break;
+        case MULAN:
+            pushbackVector(&p->deck, 541);
+            pushbackVector(&p->deck, 542);
+            pushbackVector(&p->deck, 543);
+            break;
+        case KAGUYA:
+            pushbackVector(&p->deck, 551);
+            pushbackVector(&p->deck, 552);
+            pushbackVector(&p->deck, 553);
+            break;
+        case MERMAID:
+            pushbackVector(&p->deck, 561);
+            pushbackVector(&p->deck, 562);
+            pushbackVector(&p->deck, 563);
+            break;
+        case MATCH_GIRL:
+            pushbackVector(&p->deck, 571);
+            pushbackVector(&p->deck, 572);
+            pushbackVector(&p->deck, 573);
+            break;
+        case DOROTHY:
+            pushbackVector(&p->deck, 581);
+            pushbackVector(&p->deck, 582);
+            pushbackVector(&p->deck, 583);
+            break;
+        case SCHEHERAZADE:
+            pushbackVector(&p->deck, 591);
+            pushbackVector(&p->deck, 592);
+            pushbackVector(&p->deck, 593);
+            break;
     }
     shuffle_deck(&p->deck);
 }
@@ -499,7 +568,6 @@ void apply_focus_remove(Game* game, int choice) {
     end_turn(game);
 }
 
-// resolve_skill_and_basic 函式 - 保持不變
 void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     player* attacker = &game->inner_game.players[0];
     player* defender = &game->inner_game.players[1];
@@ -509,6 +577,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
 
     if (!skill_card || !basic_card) return;
 
+    // 結算技能效果 (此處以造成傷害為例)
     if (skill_card->value > 0) {
         int damage = skill_card->value;
         if(defender->defense >= damage) {
@@ -521,9 +590,11 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
         }
     }
 
+    // 將兩張牌都移至棄牌堆
     int32_t skill_id = skill_card->id;
     int32_t basic_id = basic_card->id;
 
+    // 為了避免索引錯亂，永遠先移除索引較大的那張牌
     if (skill_idx > basic_idx) {
         eraseVector(&attacker->hand, skill_idx);
         eraseVector(&attacker->hand, basic_idx);
@@ -535,8 +606,9 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     pushbackVector(&attacker->graveyard, skill_id);
     pushbackVector(&attacker->graveyard, basic_id);
 
+    // 更新遊戲狀態
     game->player_has_acted = true;
     game->current_state = GAME_STATE_HUMAN_TURN;
     game->message = TextFormat("Used %s!", skill_card->name);
-    game->pending_skill_card_index = -1;
+    game->pending_skill_card_index = -1; // 清除待處理的技能牌
 }
