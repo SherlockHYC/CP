@@ -16,16 +16,29 @@ void apply_movement(Game* game, int direction);
 void apply_buy_card(Game* game, int card_id);
 void apply_focus_remove(Game* game, int choice);
 
+// [MODIFIED] This function now handles discarding AND drawing.
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
+
+    // 1. Move all cards from the current hand to the graveyard.
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         pushbackVector(&p->graveyard, p->hand.array[i]);
     }
+    
+    // 2. Clear the hand vector.
     clearVector(&p->hand);
+
+    // 3. Draw 6 new cards for the current player for their next turn.
+    while(p->hand.SIZE < 6) {
+        draw_card(p);
+    }
+
+    // 4. Reset turn-based stats.
     p->energy = 0;
     p->defense = 0;
     
+    // 5. Switch to the next player and start their turn.
     game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
@@ -233,11 +246,14 @@ void start_turn(Game* game) {
     p->defense = 0;
     game->player_has_acted = false;
     
-    int target_hand_size = (game->turn_count == 1 && player_id == 0) ? 4 : 6;
-    while(p->hand.SIZE < (uint32_t)target_hand_size) {
-        draw_card(p);
+    // [MODIFIED] Drawing logic is now in end_turn, except for the very first turn.
+    if(game->turn_count == 1) {
+        int target_hand_size = (player_id == 0) ? 4 : 6;
+        while(p->hand.SIZE < (uint32_t)target_hand_size) {
+            draw_card(p);
+        }
     }
-
+    
     if (player_id == 0) {
         game->current_state = GAME_STATE_HUMAN_TURN;
         game->message = "Your Turn!";
@@ -405,8 +421,7 @@ void apply_buy_card(Game* game, int card_id) {
 
     buyer->energy -= card_to_buy->cost;
     pushbackVector(&buyer->graveyard, card_id);
-    // [MODIFIED] Removed the message update to keep "Shop" displayed.
-    // game->message = TextFormat("Bought %s!", card_to_buy->name);
+    game->message = TextFormat("Bought %s!", card_to_buy->name);
     game->player_has_acted = true;
 }
 
