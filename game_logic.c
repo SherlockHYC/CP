@@ -33,19 +33,33 @@ void end_turn(Game* game) {
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
         case GAME_STATE_CHOOSE_CHAR: {
-            for(int i = 0; i < 10; i++) {
-                Rectangle btn_bounds = {200.0f + (i % 5) * 180, 250.0f + (i / 5) * 120, 160, 80};
-                if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                    init_player_deck(&game->inner_game.players[0], (CharacterType)i);
-                    init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
-                    
-                    game->inner_game.players[0].locate[0] = 6;
-                    game->inner_game.players[1].locate[0] = 4;
+            const float CARD_BTN_X = 200.0f;
+            const float CARD_BTN_Y = 280.0f;
+            const float CARD_BTN_W = 160;
+            const float CARD_BTN_H = 80;
+            const float ROW_GAP = 200.0f;
+            const float COL_GAP = 180.0f;
 
-                    start_turn(game);
-                    return;
-                }
+        for (int i = 0; i < 10; i++) {
+            int row = i / 5;
+            float extra_y = (row == 1) ? 40.0f : 0.0f;
+
+            Rectangle btn_bounds = {
+                CARD_BTN_X + (i % 5) * COL_GAP,
+                CARD_BTN_Y + row * ROW_GAP + extra_y,
+                CARD_BTN_W,
+                CARD_BTN_H
+            };
+
+            if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                init_player_deck(&game->inner_game.players[0], (CharacterType)i);
+                init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
+                game->inner_game.players[0].locate[0] = 6;
+                game->inner_game.players[1].locate[0] = 4;
+                start_turn(game);
+                return;
             }
+        }
             Rectangle exit_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 *should_close = true;

@@ -12,7 +12,7 @@ void DrawShop(const Game* game);
 void DrawFocusSelection(const Game* game);
 void DrawBattleInterface(const Game* game);
 void DrawGameBoard(const Game* game);
-void DrawCharSelection(void);
+void DrawCharSelection(Texture2D character_images[10]);
 void DrawPlayerInfo(const Game* game, bool is_human);
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card);
 
@@ -66,15 +66,66 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
     DrawTextEx(font, TextFormat("Energy: %d", p->energy), (Vector2){ (float)x_pos + 210, (float)y_pos + 45 }, 20, 1, SKYBLUE);
 }
 
-void DrawCharSelection() {
+//介面參數
+const float CARD_BTN_X = 200.0f;
+const float CARD_BTN_Y = 280.0f;
+const float CARD_BTN_W = 160;
+const float CARD_BTN_H = 80;
+const float ROW_GAP = 200.0f;
+const float COL_GAP = 180.0f;
+
+void DrawCharSelection(Texture2D character_images[10]) {
     DrawTexture(backgroundTexture, 0, 0, WHITE);
     DrawTextEx(font, "Select Your Hero", (Vector2){ (float)GetScreenWidth()/2 - MeasureTextEx(font, "Select Your Hero", 60, 2).x/2, 100 }, 60, 2, WHITE);
-    for(int i = 0; i < 10; i++) {
-        Rectangle btn_bounds = {200.0f + (i % 5) * 180, 250.0f + (i / 5) * 120, 160, 80};
+    for (int i = 0; i < 10; i++) {
+        int row = i / 5;
+        float extra_y = (row == 1) ? 40.0f : 0.0f;  // 第二排整體下移 40px
+
+        Rectangle btn_bounds = {
+            CARD_BTN_X + (i % 5) * COL_GAP,
+            CARD_BTN_Y + row * ROW_GAP + extra_y,
+            CARD_BTN_W,
+            CARD_BTN_H
+        };
+
         bool hover = CheckCollisionPointRec(GetMousePosition(), btn_bounds);
         DrawRectangleRec(btn_bounds, hover ? SKYBLUE : LIGHTGRAY);
         DrawRectangleLinesEx(btn_bounds, 2, BLACK);
         DrawTextEx(font, character_names[i], (Vector2){ btn_bounds.x + 20, btn_bounds.y + 30 }, 20, 1, BLACK);
+
+        // ✅👉 就在這裡底下加上這段：圖片等比例縮放畫法
+        // === 加入圖片顯示區 ===
+        float target_w = CARD_BTN_W;
+        float target_h = 80;
+        float img_w = character_images[i].width;
+        float img_h = character_images[i].height;
+
+        float scale = fminf(target_w / img_w, target_h / img_h);
+
+        // 👇 特別縮小花木蘭
+        if (i == 4) { // e.g.花木蘭
+            scale *= 0.94f;
+        }
+
+
+        float final_w = img_w * scale;
+        float final_h = img_h * scale;
+
+
+        float draw_x = btn_bounds.x + (target_w - final_w) / 2;
+        float draw_y = btn_bounds.y + 90 + (target_h - final_h) / 2;
+
+        if (i == 4) { // 花木蘭
+            draw_y -= 9.0f; // 往上移動 10 像素
+        }
+
+        DrawTexturePro(character_images[i],
+            (Rectangle){0, 0, img_w, img_h},
+            (Rectangle){draw_x, draw_y, final_w, final_h},
+            (Vector2){0, 0},
+            0,
+            WHITE
+        );
     }
     Rectangle exit_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
     bool btn_hover = CheckCollisionPointRec(GetMousePosition(), exit_btn);
@@ -218,10 +269,10 @@ void DrawFocusSelection(const Game* game) {
     DrawTextEx(font, "Cancel", (Vector2){ cancel_btn.x + 45, cancel_btn.y + 15 }, 20, 1, WHITE);
 }
 
-void DrawGame(Game* game) {
+void DrawGame(Game* game, Texture2D character_images[10]) {
     DrawTexture(backgroundTexture, 0, 0, WHITE);
     if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
-        DrawCharSelection();
+        DrawCharSelection(character_images);
     } else {
         if (game->current_state == GAME_STATE_SHOP || game->current_state == GAME_STATE_FOCUS_REMOVE) {
             DrawGameBoard(game);
