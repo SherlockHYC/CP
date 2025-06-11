@@ -2,12 +2,12 @@
 #include "definitions.h"
 #include "raylib.h"
 
-// External data and functions
+// 外部變數與函式 (External data and functions)
 extern const char* character_names[];
 extern Font font;
 extern Texture2D backgroundTexture;
 
-// Forward declaration
+// 函式原型 (Forward declaration)
 void DrawShop(const Game* game);
 void DrawFocusSelection(const Game* game);
 void DrawBattleInterface(const Game* game);
@@ -15,12 +15,13 @@ void DrawGameBoard(const Game* game);
 void DrawCharSelection(void);
 void DrawPlayerInfo(const Game* game, bool is_human);
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card);
-
+void DrawSkillPairingOverlay(const Game* game);
 
 // =================================================================
-//                      Drawing Functions
+//                      繪製函式 (Drawing Functions)
 // =================================================================
 
+// DrawCard 函式 - 保持不變
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card) {
     if (is_opponent_card) {
         DrawRectangleRounded(bounds, 0.08f, 10, DARKBLUE);
@@ -39,13 +40,13 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
         else if (card->type == SKILL) DrawTextEx(font, "Skill", (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, BLUE);
         else if (card->type == MOVE) DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, PURPLE);
         
-        // [MODIFIED] Removed the 'else if' for SKILL card cost display
         if (card->type == ATTACK || card->type == DEFENSE || card->type == MOVE || card->type == GENERIC) {
              DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
         }
     }
 }
 
+// DrawPlayerInfo 函式 - 保持不變
 void DrawPlayerInfo(const Game* game, bool is_human) {
     int player_idx = is_human ? 0 : 1;
     const player* p = &game->inner_game.players[player_idx];
@@ -66,6 +67,7 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
     DrawTextEx(font, TextFormat("Energy: %d", p->energy), (Vector2){ (float)x_pos + 210, (float)y_pos + 45 }, 20, 1, SKYBLUE);
 }
 
+// DrawCharSelection 函式 - 保持不變
 void DrawCharSelection() {
     DrawTexture(backgroundTexture, 0, 0, WHITE);
     DrawTextEx(font, "Select Your Hero", (Vector2){ (float)GetScreenWidth()/2 - MeasureTextEx(font, "Select Your Hero", 60, 2).x/2, 100 }, 60, 2, WHITE);
@@ -82,6 +84,7 @@ void DrawCharSelection() {
     DrawTextEx(font, "Exit Game", (Vector2){ exit_btn.x + 40, exit_btn.y + 15 }, 20, 1, WHITE);
 }
 
+// DrawGameBoard 函式 - 保持不變
 void DrawGameBoard(const Game* game) {
     float screenWidth = GetScreenWidth();
     float screenHeight = GetScreenHeight();
@@ -101,7 +104,6 @@ void DrawGameBoard(const Game* game) {
     const float vertical_gap = 95.0f;
     float top_row_y = screen_center_y - vertical_gap + board_offset_y;
     float bottom_row_y = screen_center_y + vertical_gap + board_offset_y;
-
 
     for (int i = 0; i < gameplay_slots; i++) {
         float current_x = start_x + i * (slot_w + spacing);
@@ -148,6 +150,7 @@ void DrawGameBoard(const Game* game) {
     DrawTextEx(font, TextFormat("%d", game->inner_game.players[0].graveyard.SIZE), (Vector2){discard_rect.x + 30, discard_rect.y + 40}, 24, 1, WHITE);
 }
 
+// [修改] DrawBattleInterface 函式
 void DrawBattleInterface(const Game* game) {
     const player* human = &game->inner_game.players[0];
     int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
@@ -165,9 +168,9 @@ void DrawBattleInterface(const Game* game) {
     int bot_hand_width = bot->hand.SIZE * (CARD_WIDTH/1.5f + 10) - 10;
     float bot_hand_start_x = (GetScreenWidth() - bot_hand_width) / 2.0f;
     for (uint32_t i = 0; i < bot->hand.SIZE; ++i) {
-         Rectangle bot_card = {bot_hand_start_x + i * (CARD_WIDTH/1.5f + 10), 80, CARD_WIDTH/1.5f, CARD_HEIGHT/1.5f};
-         DrawRectangleRounded(bot_card, 0.08f, 10, DARKBLUE);
-         DrawRectangleRoundedLinesEx(bot_card, 0.08f, 10, 4, BLUE);
+        Rectangle bot_card = {bot_hand_start_x + i * (CARD_WIDTH/1.5f + 10), 80, CARD_WIDTH/1.5f, CARD_HEIGHT/1.5f};
+        DrawRectangleRounded(bot_card, 0.08f, 10, DARKBLUE);
+        DrawRectangleRoundedLinesEx(bot_card, 0.08f, 10, 4, BLUE);
     }
     
     Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
@@ -185,10 +188,18 @@ void DrawBattleInterface(const Game* game) {
     DrawRectangleRec(shop_btn, shop_hover ? SKYBLUE : BLUE);
     DrawTextEx(font, "Shop", (Vector2){ shop_btn.x + 65, shop_btn.y + 15 }, 20, 1, WHITE);
 
-    Vector2 message_size = MeasureTextEx(font, game->message, 40, 2);
-    DrawTextEx(font, game->message, (Vector2){ (GetScreenWidth() - message_size.x)/2, GetScreenHeight() / 2.0f }, 40, 2, WHITE);
+    // [修改] 中央提示文字只顯示當前回合狀態，不再使用 game->message
+    const char* turn_text = "";
+    if (game->inner_game.now_turn_player_id == 0) {
+        turn_text = "Your Turn";
+    } else {
+        turn_text = "Opponent's Turn";
+    }
+    Vector2 message_size = MeasureTextEx(font, turn_text, 40, 2);
+    DrawTextEx(font, turn_text, (Vector2){ (GetScreenWidth() - message_size.x)/2, GetScreenHeight() / 2.0f }, 40, 2, WHITE);
 }
 
+// DrawFocusSelection 函式 - 保持不變
 void DrawFocusSelection(const Game* game) {
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.85f));
     DrawTextEx(font, "Focus: Remove a Card", (Vector2){ (float)GetScreenWidth()/2 - MeasureTextEx(font, "Focus: Remove a Card", 40, 2).x/2, 50 }, 40, 2, WHITE);
@@ -218,11 +229,13 @@ void DrawFocusSelection(const Game* game) {
     DrawTextEx(font, "Cancel", (Vector2){ cancel_btn.x + 45, cancel_btn.y + 15 }, 20, 1, WHITE);
 }
 
+// DrawGame 函式 - 保持不變
 void DrawGame(Game* game) {
     DrawTexture(backgroundTexture, 0, 0, WHITE);
     if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
         DrawCharSelection();
     } else {
+        // --- 繪製主要遊戲介面 ---
         if (game->current_state == GAME_STATE_SHOP || game->current_state == GAME_STATE_FOCUS_REMOVE) {
             DrawGameBoard(game);
             DrawPlayerInfo(game, true);
@@ -234,6 +247,11 @@ void DrawGame(Game* game) {
             DrawPlayerInfo(game, true);
             DrawPlayerInfo(game, false);
             DrawBattleInterface(game);
+        }
+        
+        // --- 繪製疊加層 (Overlays) ---
+        if (game->current_state == GAME_STATE_AWAITING_BASIC_FOR_SKILL) {
+            DrawSkillPairingOverlay(game);
         }
         
         if (game->current_state == GAME_STATE_CHOOSE_MOVE_DIRECTION) {
@@ -259,6 +277,7 @@ void DrawGame(Game* game) {
     }
 }
 
+// DrawShop 函式 - 保持不變
 void DrawShop(const Game* game) {
     float screenWidth = GetScreenWidth();
     float screenHeight = GetScreenHeight();
@@ -288,4 +307,48 @@ void DrawShop(const Game* game) {
     bool hover = CheckCollisionPointRec(GetMousePosition(), close_btn);
     DrawRectangleRec(close_btn, hover ? RED : MAROON);
     DrawTextEx(font, "Close", (Vector2){close_btn.x + 40, close_btn.y + 15}, 20, 1, WHITE);
+}
+
+// DrawSkillPairingOverlay 函式 - 保持不變
+void DrawSkillPairingOverlay(const Game* game) {
+    // 繪製半透明黑色遮罩，讓玩家專注於選擇
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+
+    // 繪製提示訊息
+    Vector2 msg_size = MeasureTextEx(font, game->message, 30, 1);
+    DrawTextEx(font, game->message, (Vector2){(GetScreenWidth() - msg_size.x)/2, GetScreenHeight()/2 - 40}, 30, 1, WHITE);
+
+    // 繪製取消按鈕
+    Rectangle cancel_btn = { GetScreenWidth() / 2.0f - 100, GetScreenHeight() / 2.0f + 50, 200, 50 };
+    bool hover = CheckCollisionPointRec(GetMousePosition(), cancel_btn);
+    DrawRectangleRec(cancel_btn, hover ? RED : MAROON);
+    DrawTextEx(font, "Cancel", (Vector2){ cancel_btn.x + 65, cancel_btn.y + 15 }, 20, 1, WHITE);
+
+    // 在手牌上繪製高亮提示，並重繪有效卡牌
+    const player* human = &game->inner_game.players[0];
+    int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
+    float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
+    float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
+
+    for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
+        Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
+        const Card* card_info = get_card_info(human->hand.array[i]);
+        if (!card_info) continue;
+
+        // 如果是已選擇的技能牌
+        if ((int)i == game->pending_skill_card_index) {
+            // 只畫黃色框，讓它保持被遮罩的狀態
+            DrawRectangleRoundedLinesEx(card_bounds, 0.08f, 10, 5, YELLOW);
+        } else {
+            // 檢查是否為有效的基礎牌
+            bool is_valid_basic = (card_info->type == ATTACK || card_info->type == DEFENSE || card_info->type == MOVE);
+            if (is_valid_basic) {
+                // 先重繪卡片，使其不被遮罩變暗
+                DrawCard(card_info, card_bounds, false, false);
+                // 再畫上綠色高亮框
+                DrawRectangleRoundedLinesEx(card_bounds, 0.08f, 10, 3, LIME);
+            }
+            // 對於其他無效卡牌，什麼都不做，讓它們自然被主遮罩變暗
+        }
+    }
 }
