@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.dbclient-js": "javascript",
+        "gui.h": "c",
+        "game_logic.h": "c"
+    }
+}

@@ -8,6 +8,8 @@
 // Global variables
 Font font;
 Texture2D backgroundTexture;
+Texture2D character_images[10];
+
 
 void show_help();
 
@@ -32,6 +34,19 @@ int main(int argc, char *argv[])
 
     font = GetFontDefault();
     backgroundTexture = LoadTexture("background.png");
+
+    character_images[0] = LoadTexture("assets/redhood.png");
+    character_images[1] = LoadTexture("assets/snowwhite.png");
+    character_images[2] = LoadTexture("assets/sleeping.png");
+    character_images[3] = LoadTexture("assets/alice.png");
+    character_images[4] = LoadTexture("assets/mulan.png");
+    character_images[5] = LoadTexture("assets/kaguya.png");
+    character_images[6] = LoadTexture("assets/mermaid.png");
+    character_images[7] = LoadTexture("assets/matchgirl.png");
+    character_images[8] = LoadTexture("assets/dorothy.png");
+    character_images[9] = LoadTexture("assets/scheherazade.png");
+
+
     
     SetTargetFPS(60);
 
@@ -56,7 +71,7 @@ int main(int argc, char *argv[])
         // 2. Draw everything
         BeginDrawing();
         ClearBackground(DARKGRAY);
-        DrawGame(game); // Pass the pointer
+        DrawGame(game, character_images); // Pass the pointer
         EndDrawing();
     }
 
