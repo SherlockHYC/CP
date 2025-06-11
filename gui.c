@@ -42,7 +42,7 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
         if (card->type == ATTACK || card->type == DEFENSE || card->type == MOVE || card->type == GENERIC) {
              DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
         } else if (card->type == SKILL) {
-             DrawTextEx(font, TextFormat("Cost: %d Energy", card->cost), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, DARKGRAY);
+             DrawTextEx(font, "Paired Action", (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, DARKGRAY);
         }
     }
 }
@@ -94,14 +94,15 @@ void DrawGameBoard(const Game* game) {
     float gameplay_area_w = gameplay_slots * (slot_w + spacing) - spacing;
     float start_x = (screenWidth - gameplay_area_w) / 2.0f;
     
-    // [FIX] Recalculate Y positions for correct vertical alignment
-    float mid_y = screenHeight / 2.0f - (slot_h / 2.0f);
-    const float circle_radius = 35.0f;
-    const float vertical_gap = 45.0f; // Gap between edge of circle and edge of slot
-    float top_row_y = mid_y - circle_radius - vertical_gap;
-    float bottom_row_y = mid_y + slot_h + circle_radius + vertical_gap;
+    float screen_center_y = screenHeight / 2.0f;
+    float board_offset_y = 40.0f;
+    float mid_y = screen_center_y - (slot_h / 2.0f) + board_offset_y;
 
-    // --- Draw circles FIRST ---
+    const float circle_radius = 35.0f;
+    const float vertical_gap = 95.0f;
+    float top_row_y = screen_center_y - vertical_gap + board_offset_y;
+    float bottom_row_y = screen_center_y + vertical_gap + board_offset_y;
+
     for (int i = 0; i < gameplay_slots; i++) {
         float current_x = start_x + i * (slot_w + spacing);
         float circle_center_x = current_x + (slot_w / 2.0f);
@@ -127,7 +128,6 @@ void DrawGameBoard(const Game* game) {
         }
     }
     
-    // --- Draw the middle row (Relic slots) AFTER the circles ---
     for (int i = 0; i < gameplay_slots; i++) {
         float current_x = start_x + i * (slot_w + spacing);
         Rectangle card_slot = {current_x, mid_y, slot_w, slot_h};
@@ -135,7 +135,6 @@ void DrawGameBoard(const Game* game) {
         DrawRectangleRoundedLinesEx(card_slot, 0.1f, 10, 2, LIME);
     }
     
-    // --- Draw the Deck and Discard piles ---
     Rectangle deck_rect = { start_x - slot_w - spacing * 3, mid_y, slot_w, slot_h };
     DrawRectangleRounded(deck_rect, 0.1f, 10, Fade(DARKBLUE, 0.8f));
     DrawRectangleRoundedLinesEx(deck_rect, 0.1f, 10, 2, SKYBLUE);
@@ -159,7 +158,8 @@ void DrawBattleInterface(const Game* game) {
         Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
         bool is_hovered = CheckCollisionPointRec(GetMousePosition(), card_bounds);
         const Card* card_info = get_card_info(human->hand.array[i]);
-        DrawCard(card_info, card_bounds, is_hovered, false);
+        bool is_pending_skill = (game->current_state == GAME_STATE_AWAITING_BASIC_FOR_SKILL && game->pending_skill_card_index == (int)i);
+        DrawCard(card_info, card_bounds, is_hovered || is_pending_skill, false);
     }
     
     const player* bot = &game->inner_game.players[1];
@@ -251,10 +251,10 @@ void DrawFocusSelection(const Game* game) {
 }
 
 void DrawGame(Game* game) {
+    DrawTexture(backgroundTexture, 0, 0, WHITE);
     if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
         DrawCharSelection();
     } else {
-        DrawTexture(backgroundTexture, 0, 0, WHITE);
         DrawGameBoard(game);
         DrawPlayerInfo(game, true);
         DrawPlayerInfo(game, false);
