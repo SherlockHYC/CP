@@ -233,7 +233,6 @@ void start_turn(Game* game) {
     p->defense = 0;
     game->player_has_acted = false;
     
-    // [FIX] Cast target_hand_size to uint32_t to match p->hand.SIZE type.
     int target_hand_size = (game->turn_count == 1 && player_id == 0) ? 4 : 6;
     while(p->hand.SIZE < (uint32_t)target_hand_size) {
         draw_card(p);
@@ -406,7 +405,8 @@ void apply_buy_card(Game* game, int card_id) {
 
     buyer->energy -= card_to_buy->cost;
     pushbackVector(&buyer->graveyard, card_id);
-    game->message = TextFormat("Bought %s!", card_to_buy->name);
+    // [MODIFIED] Removed the message update to keep "Shop" displayed.
+    // game->message = TextFormat("Bought %s!", card_to_buy->name);
     game->player_has_acted = true;
 }
 
