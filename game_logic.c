@@ -79,7 +79,7 @@ void UpdateGame(Game* game, bool* should_close) {
 
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
                 Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
-                 if (CheckCollisionPointRec(GetMousePosition(), card_bounds)) {
+                if (CheckCollisionPointRec(GetMousePosition(), card_bounds)) {
                     card_bounds.y -= 20;
                 }
                 if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -172,6 +172,9 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
+        case GAME_STATE_AWAITING_BASIC_FOR_SKILL: {
+            break;
+        }
         case GAME_STATE_BOT_TURN: {
             game->bot_action_timer -= GetFrameTime();
             if (game->bot_action_timer <= 0) {
@@ -184,7 +187,7 @@ void UpdateGame(Game* game, bool* should_close) {
             break;
         }
         case GAME_STATE_GAME_OVER: {
-             Rectangle back_btn = { (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 + 40, 250, 50 };
+            Rectangle back_btn = { (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 + 40, 250, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), back_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 InitGame(game);
             }
@@ -233,7 +236,6 @@ void start_turn(Game* game) {
     p->defense = 0;
     game->player_has_acted = false;
     
-    // [FIX] Cast target_hand_size to uint32_t to match p->hand.SIZE type.
     int target_hand_size = (game->turn_count == 1 && player_id == 0) ? 4 : 6;
     while(p->hand.SIZE < (uint32_t)target_hand_size) {
         draw_card(p);
@@ -352,11 +354,7 @@ void apply_card_effect(Game* game, int card_hand_index) {
         game->current_state = GAME_STATE_CHOOSE_MOVE_DIRECTION;
         game->message = "Choose a direction to move";
     } else if (type == SKILL) {
-        if (attacker->energy < card->cost) {
-            game->message = "Not enough energy for this skill!";
-            return;
-        }
-        attacker->energy -= card->cost;
+        // [MODIFIED] Removed the energy check and consumption for SKILL cards.
         if(card->value > 0) {
              int damage = card->value;
              if(defender->defense >= damage) defender->defense -= damage;
