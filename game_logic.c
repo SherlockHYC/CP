@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-// Function Prototypes
+// 函式原型 (Function Prototypes) - 保持不變
 void shuffle_deck(vector* deck);
 void draw_card(player* p);
 void start_turn(Game* game);
@@ -16,32 +16,59 @@ void apply_movement(Game* game, int direction);
 void apply_buy_card(Game* game, int card_id);
 void apply_focus_remove(Game* game, int choice);
 
+// [修改] end_turn 函式，加入抽牌邏輯
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
+    
+    // 1. 當前回合玩家棄置所有手牌
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         pushbackVector(&p->graveyard, p->hand.array[i]);
     }
     clearVector(&p->hand);
+    
+    // 2. 重置能量和防禦
     p->energy = 0;
     p->defense = 0;
     
+    // 3. [新邏輯] 棄牌後，為下個回合抽出新的手牌
+    int target_hand_size = 6; // 標準抽牌數量
+    while(p->hand.SIZE < (uint32_t)target_hand_size) {
+        draw_card(p);
+    }
+    
+    // 4. 交換玩家順序並開始新回合
     game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
 
+// [修改] UpdateGame 函式，處理遊戲初始抽牌
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
         case GAME_STATE_CHOOSE_CHAR: {
             for(int i = 0; i < 10; i++) {
                 Rectangle btn_bounds = {200.0f + (i % 5) * 180, 250.0f + (i / 5) * 120, 160, 80};
                 if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    // 初始化玩家牌組
                     init_player_deck(&game->inner_game.players[0], (CharacterType)i);
                     init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
                     
                     game->inner_game.players[0].locate[0] = 6;
                     game->inner_game.players[1].locate[0] = 4;
 
+                    // [新邏輯] 處理遊戲開始時的初始抽牌
+                    // 玩家 0 (先手) 抽 4 張
+                    player* p0 = &game->inner_game.players[0];
+                    while(p0->hand.SIZE < 4) {
+                        draw_card(p0);
+                    }
+                    // 玩家 1 (後手) 抽 6 張
+                    player* p1 = &game->inner_game.players[1];
+                    while(p1->hand.SIZE < 6) {
+                        draw_card(p1);
+                    }
+                    
+                    // 直接開始第一回合
                     start_turn(game);
                     return;
                 }
@@ -200,6 +227,7 @@ void UpdateGame(Game* game, bool* should_close) {
     }
 }
 
+// init_player_deck 函式 - 保持不變
 void init_player_deck(player* p, CharacterType character) {
     p->character = character; 
     p->deck = initVector(); 
@@ -228,19 +256,19 @@ void init_player_deck(player* p, CharacterType character) {
     shuffle_deck(&p->deck);
 }
 
+// [修改] start_turn 函式，移除抽牌邏輯
 void start_turn(Game* game) {
     game->turn_count++;
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
     
+    // 重置防禦值和行動旗標
     p->defense = 0;
     game->player_has_acted = false;
     
-    int target_hand_size = (game->turn_count == 1 && player_id == 0) ? 4 : 6;
-    while(p->hand.SIZE < (uint32_t)target_hand_size) {
-        draw_card(p);
-    }
+    // [修改] 抽牌邏輯已移至 end_turn 和初始設定中，此處不再需要
 
+    // 設定當前回合狀態和訊息
     if (player_id == 0) {
         game->current_state = GAME_STATE_HUMAN_TURN;
         game->message = "Your Turn!";
@@ -251,6 +279,7 @@ void start_turn(Game* game) {
     }
 }
 
+// InitGame 函式 - 保持不變
 void InitGame(Game* game) {
     srand(time(NULL));
     memset(game, 0, sizeof(Game));
@@ -277,6 +306,7 @@ void InitGame(Game* game) {
     }
 }
 
+// shuffle_deck 函式 - 保持不變
 void shuffle_deck(vector* deck) {
     if (deck->SIZE < 2) return;
     for (uint32_t i = 0; i < deck->SIZE - 1; ++i) {
@@ -287,6 +317,7 @@ void shuffle_deck(vector* deck) {
     }
 }
 
+// draw_card 函式 - 保持不變
 void draw_card(player* p) {
     if (p->deck.SIZE == 0) {
         if (p->graveyard.SIZE == 0) return;
@@ -300,6 +331,7 @@ void draw_card(player* p) {
     }
 }
 
+// apply_movement 函式 - 保持不變
 void apply_movement(Game* game, int direction) {
     int player_id = game->inner_game.now_turn_player_id;
     player* mover = &game->inner_game.players[player_id];
@@ -323,6 +355,7 @@ void apply_movement(Game* game, int direction) {
     game->message = "You moved!";
 }
 
+// apply_card_effect 函式 - 保持不變
 void apply_card_effect(Game* game, int card_hand_index) {
     int player_id = game->inner_game.now_turn_player_id;
     player* attacker = &game->inner_game.players[player_id];
@@ -340,10 +373,10 @@ void apply_card_effect(Game* game, int card_hand_index) {
              int damage = card->value;
              if(defender->defense >= damage) defender->defense -= damage;
              else { 
-                int damage_left = damage - defender->defense;
-                defender->defense = 0;
-                if (defender->life <= damage_left) defender->life = 0;
-                else defender->life -= damage_left;
+                 int damage_left = damage - defender->defense;
+                 defender->defense = 0;
+                 if (defender->life <= damage_left) defender->life = 0;
+                 else defender->life -= damage_left;
              }
         } else if (type == DEFENSE) {
             attacker->defense += card->value;
@@ -354,15 +387,14 @@ void apply_card_effect(Game* game, int card_hand_index) {
         game->current_state = GAME_STATE_CHOOSE_MOVE_DIRECTION;
         game->message = "Choose a direction to move";
     } else if (type == SKILL) {
-        // [MODIFIED] Removed the energy check and consumption for SKILL cards.
         if(card->value > 0) {
              int damage = card->value;
              if(defender->defense >= damage) defender->defense -= damage;
              else { 
-                int damage_left = damage - defender->defense;
-                defender->defense = 0;
-                if(defender->life <= damage_left) defender->life = 0;
-                else defender->life -= damage_left;
+                 int damage_left = damage - defender->defense;
+                 defender->defense = 0;
+                 if(defender->life <= damage_left) defender->life = 0;
+                 else defender->life -= damage_left;
              }
         }
     }
@@ -373,6 +405,7 @@ void apply_card_effect(Game* game, int card_hand_index) {
     eraseVector(&attacker->hand, card_hand_index);
 }
 
+// apply_buy_card 函式 - 保持不變
 void apply_buy_card(Game* game, int card_id) {
     player* buyer = &game->inner_game.players[game->inner_game.now_turn_player_id];
     const Card* card_to_buy = get_card_info(card_id);
@@ -408,6 +441,7 @@ void apply_buy_card(Game* game, int card_id) {
     game->player_has_acted = true;
 }
 
+// apply_focus_remove 函式 - 保持不變
 void apply_focus_remove(Game* game, int choice) {
     player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
     if (choice > 0 && choice <= (int)p->hand.SIZE) {
