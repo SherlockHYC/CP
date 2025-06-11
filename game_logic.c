@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-// 函式原型 (Function Prototypes)
+// 函式原型
 void shuffle_deck(vector* deck);
 void draw_card(player* p);
 void start_turn(Game* game);
@@ -15,11 +15,10 @@ void apply_card_effect(Game* game, int card_hand_index);
 void apply_movement(Game* game, int direction);
 void apply_buy_card(Game* game, int card_id);
 void apply_focus_remove(Game* game, int choice);
-// [新] 新增一個函式原型，用於處理技能牌與基礎牌的結算
 void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx);
 
 
-// end_turn 函式 - 保持不變 (沿用上一版本的邏輯)
+// end_turn 函式 - 保持不變
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
@@ -41,7 +40,7 @@ void end_turn(Game* game) {
     start_turn(game);
 }
 
-// [修改] UpdateGame 函式，加入新遊戲狀態的處理
+// [修改] UpdateGame 函式，加入商店分頁的處理邏輯
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
         case GAME_STATE_CHOOSE_CHAR: {
@@ -85,7 +84,7 @@ void UpdateGame(Game* game, bool* should_close) {
             Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), shop_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 game->current_state = GAME_STATE_SHOP;
-                game->message = "Shop";
+                game->message = "Shop"; // 進入商店時的暫時訊息
                 return;
             }
 
@@ -112,27 +111,41 @@ void UpdateGame(Game* game, bool* should_close) {
             break;
         }
         case GAME_STATE_SHOP: {
-            float startY = 120;
-            float startX = 100;
-            float card_gap_x = CARD_WIDTH + 20;
-            float card_gap_y = CARD_HEIGHT + 40;
+            // [新邏輯] 處理頁籤切換
+            Rectangle basic_tab = { GetScreenWidth() / 2.0f - 210, 150, 200, 40 };
+            Rectangle skill_tab = { GetScreenWidth() / 2.0f + 10, 150, 200, 40 };
+            if (CheckCollisionPointRec(GetMousePosition(), basic_tab) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                game->shop_page = 0;
+            }
+            if (CheckCollisionPointRec(GetMousePosition(), skill_tab) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                game->shop_page = 1;
+            }
 
-            for (int type = 0; type < 3; type++) {
-                for (int level = 0; level < 3; level++) {
-                    const vector* pile = &game->shop_piles[type][level];
-                    if (pile->SIZE > 0) {
-                        const Card* card = get_card_info(pile->array[0]);
-                        if(card) {
-                            Rectangle bounds = {startX + level * card_gap_x, startY + type * card_gap_y, CARD_WIDTH, CARD_HEIGHT};
-                            if (CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                                apply_buy_card(game, card->id);
-                                return;
+            // [新邏輯] 只在基礎牌頁面處理購買邏輯
+            if (game->shop_page == 0) {
+                float startY = 220;
+                float startX = 100;
+                float card_gap_x = CARD_WIDTH + 20;
+                float card_gap_y = CARD_HEIGHT + 60;
+
+                for (int type = 0; type < 3; type++) {
+                    for (int level = 0; level < 3; level++) {
+                        const vector* pile = &game->shop_piles[type][level];
+                        if (pile->SIZE > 0) {
+                            const Card* card = get_card_info(pile->array[0]);
+                            if(card) {
+                                Rectangle bounds = {startX + level * card_gap_x, startY + type * card_gap_y, CARD_WIDTH, CARD_HEIGHT};
+                                if (CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                                    apply_buy_card(game, card->id);
+                                    return;
+                                }
                             }
                         }
                     }
                 }
             }
             
+            // 關閉商店按鈕
             Rectangle close_btn = { GetScreenWidth() - 160, GetScreenHeight() - 70, 140, 50 };
             if(CheckCollisionPointRec(GetMousePosition(), close_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
                 game->current_state = GAME_STATE_HUMAN_TURN;
@@ -189,39 +202,33 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
-        // [新邏輯] 處理等待選擇基礎牌的狀態
         case GAME_STATE_AWAITING_BASIC_FOR_SKILL: {
             player* human = &game->inner_game.players[0];
             int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
             float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
             float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
 
-            // 檢查手牌點擊
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-                // 跳過已選擇的技能牌
                 if ((int)i == game->pending_skill_card_index) continue;
 
                 const Card* card_info = get_card_info(human->hand.array[i]);
                 if (!card_info) continue;
 
-                // 檢查是否為有效的基礎牌
                 bool is_basic = (card_info->type == ATTACK || card_info->type == DEFENSE || card_info->type == MOVE);
                 if (is_basic) {
                     Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
                     if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                        // 找到配對，執行結算
                         resolve_skill_and_basic(game, game->pending_skill_card_index, i);
                         return;
                     }
                 }
             }
             
-            // 檢查取消按鈕
             Rectangle cancel_btn = { GetScreenWidth() / 2.0f - 100, GetScreenHeight() / 2.0f + 50, 200, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), cancel_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 game->current_state = GAME_STATE_HUMAN_TURN;
                 game->message = "Your Turn!";
-                game->pending_skill_card_index = -1; // 清除待處理的技能牌
+                game->pending_skill_card_index = -1;
             }
             break;
         }
@@ -230,7 +237,7 @@ void UpdateGame(Game* game, bool* should_close) {
             if (game->bot_action_timer <= 0) {
                 int card_to_play = get_bot_action(&game->inner_game);
                 if (card_to_play != -1) {
-                    // Bot AI 不支援新技能機制，直接結束回合
+                    // Bot AI currently does not support the new skill mechanic.
                 }
                 end_turn(game);
             }
@@ -250,7 +257,7 @@ void UpdateGame(Game* game, bool* should_close) {
     }
 }
 
-// init_player_deck - 保持不變
+// init_player_deck 函式 - 保持不變
 void init_player_deck(player* p, CharacterType character) {
     p->character = character; 
     p->deck = initVector(); 
@@ -279,7 +286,7 @@ void init_player_deck(player* p, CharacterType character) {
     shuffle_deck(&p->deck);
 }
 
-// start_turn - 保持不變
+// start_turn 函式 - 保持不變
 void start_turn(Game* game) {
     game->turn_count++;
     int player_id = game->inner_game.now_turn_player_id;
@@ -298,14 +305,15 @@ void start_turn(Game* game) {
     }
 }
 
-// InitGame - 保持不變
+// [修改] InitGame 函式，初始化商店頁面
 void InitGame(Game* game) {
     srand(time(NULL));
     memset(game, 0, sizeof(Game));
     game->current_state = GAME_STATE_CHOOSE_CHAR;
     game->message = "Select Your Hero";
     game->turn_count = 0;
-    game->pending_skill_card_index = -1; // 初始化
+    game->pending_skill_card_index = -1;
+    game->shop_page = 0; // [新] 預設為基礎牌商店頁面
 
     for(int i=0; i<3; ++i) for(int j=0; j<3; ++j) game->shop_piles[i][j] = initVector();
 
@@ -326,7 +334,7 @@ void InitGame(Game* game) {
     }
 }
 
-// shuffle_deck - 保持不變
+// shuffle_deck 函式 - 保持不變
 void shuffle_deck(vector* deck) {
     if (deck->SIZE < 2) return;
     for (uint32_t i = 0; i < deck->SIZE - 1; ++i) {
@@ -337,7 +345,7 @@ void shuffle_deck(vector* deck) {
     }
 }
 
-// draw_card - 保持不變
+// draw_card 函式 - 保持不變
 void draw_card(player* p) {
     if (p->deck.SIZE == 0) {
         if (p->graveyard.SIZE == 0) return;
@@ -351,7 +359,7 @@ void draw_card(player* p) {
     }
 }
 
-// apply_movement - 保持不變
+// apply_movement 函式 - 保持不變
 void apply_movement(Game* game, int direction) {
     int player_id = game->inner_game.now_turn_player_id;
     player* mover = &game->inner_game.players[player_id];
@@ -375,7 +383,7 @@ void apply_movement(Game* game, int direction) {
     game->message = "You moved!";
 }
 
-// [修改] apply_card_effect 函式，改變技能牌的處理方式
+// apply_card_effect 函式 - 保持不變
 void apply_card_effect(Game* game, int card_hand_index) {
     int player_id = game->inner_game.now_turn_player_id;
     player* attacker = &game->inner_game.players[player_id];
@@ -387,15 +395,12 @@ void apply_card_effect(Game* game, int card_hand_index) {
     CardType type = card->type;
 
     if (type == SKILL) {
-        // [新邏輯] 玩技能牌時，不再直接結算效果
-        // 而是進入等待狀態，並記錄下這張技能牌的位置
         game->pending_skill_card_index = card_hand_index;
         game->current_state = GAME_STATE_AWAITING_BASIC_FOR_SKILL;
         game->message = "Select a Basic Card (ATK/DEF/MOV) to use.";
-        return; // 提早結束函式，等待下一次玩家輸入
+        return;
     }
 
-    // --- 以下為非技能牌的處理，保持不變 ---
     int32_t played_card_id = card->id;
     if (type == ATTACK || type == DEFENSE || type == GENERIC) {
         attacker->energy += card->value;
@@ -425,7 +430,7 @@ void apply_card_effect(Game* game, int card_hand_index) {
     eraseVector(&attacker->hand, card_hand_index);
 }
 
-// apply_buy_card - 保持不變
+// apply_buy_card 函式 - 保持不變
 void apply_buy_card(Game* game, int card_id) {
     player* buyer = &game->inner_game.players[game->inner_game.now_turn_player_id];
     const Card* card_to_buy = get_card_info(card_id);
@@ -461,7 +466,7 @@ void apply_buy_card(Game* game, int card_id) {
     game->player_has_acted = true;
 }
 
-// apply_focus_remove - 保持不變
+// apply_focus_remove 函式 - 保持不變
 void apply_focus_remove(Game* game, int choice) {
     player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
     if (choice > 0 && choice <= (int)p->hand.SIZE) {
@@ -476,7 +481,7 @@ void apply_focus_remove(Game* game, int choice) {
     end_turn(game);
 }
 
-// [新函式] 用於結算技能牌和基礎牌的組合效果
+// resolve_skill_and_basic 函式 - 保持不變
 void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     player* attacker = &game->inner_game.players[0];
     player* defender = &game->inner_game.players[1];
@@ -486,7 +491,6 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
 
     if (!skill_card || !basic_card) return;
 
-    // 結算技能效果 (此處以造成傷害為例，您可以根據不同技能牌ID擴充)
     if (skill_card->value > 0) {
         int damage = skill_card->value;
         if(defender->defense >= damage) {
@@ -499,12 +503,9 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
         }
     }
 
-    // 將兩張牌都移至棄牌堆
-    // 先記錄ID，因為移除後索引會改變
     int32_t skill_id = skill_card->id;
     int32_t basic_id = basic_card->id;
 
-    // 為了避免索引錯亂，永遠先移除索引較大的那張牌
     if (skill_idx > basic_idx) {
         eraseVector(&attacker->hand, skill_idx);
         eraseVector(&attacker->hand, basic_idx);
@@ -516,9 +517,8 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     pushbackVector(&attacker->graveyard, skill_id);
     pushbackVector(&attacker->graveyard, basic_id);
 
-    // 更新遊戲狀態
     game->player_has_acted = true;
     game->current_state = GAME_STATE_HUMAN_TURN;
     game->message = TextFormat("Used %s!", skill_card->name);
-    game->pending_skill_card_index = -1; // 清除待處理的技能牌
+    game->pending_skill_card_index = -1;
 }

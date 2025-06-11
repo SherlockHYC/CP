@@ -13,7 +13,7 @@ typedef enum {
     GAME_STATE_SHOP, 
     GAME_STATE_CHOOSE_MOVE_DIRECTION,
     GAME_STATE_FOCUS_REMOVE,
-    GAME_STATE_AWAITING_BASIC_FOR_SKILL // [NEW] State for when a skill card is played and waits for a basic card.
+    GAME_STATE_AWAITING_BASIC_FOR_SKILL
 } GameState;
 
 // Main Game Struct
@@ -27,7 +27,10 @@ typedef struct Game {
     vector shop_piles[3][3];
     int pending_move_distance; 
     int turn_count;
-    int pending_skill_card_index; // [NEW] Stores the hand index of the selected skill card.
+    int pending_skill_card_index;
+
+    // [新] 新增一個變數來記錄當前的商店頁面 (0: 基礎牌, 1: 技能牌)
+    int shop_page;
 } Game;
 
 // Function Prototypes
