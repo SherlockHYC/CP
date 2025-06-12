@@ -192,6 +192,34 @@ void UpdateGame(Game* game, bool* should_close) {
                 }
             }
             
+            if (game->shop_page == 1) {
+                int chara = game->inner_game.players[0].character;
+
+                if (chara == RED_HOOD) {
+                    for (int type = 0; type < 3; ++type) {
+                            const vector* pile = &game->shop_skill_piles[chara][type];
+                            if (!pile || pile->SIZE == 0) continue;  // ⛑️ 防止錯誤進入未初始化卡堆
+
+                            for (uint32_t i = 0; i < pile->SIZE; ++i) {
+                                const Card* card = get_card_info(pile->array[i]);
+                                if (!card) continue;
+
+                            float x = 200 + (i % 5) * (CARD_WIDTH + 30);
+                            float y = 250 + type * 250 + (i / 5) * (CARD_HEIGHT + 20);
+                            Rectangle bounds = { x, y, CARD_WIDTH, CARD_HEIGHT };
+
+                            if (CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                                apply_buy_card(game, card->id);
+                                return;
+                            }
+                        }
+                    }
+                } else {
+                    game->message = "技能商店尚未支援此角色！";
+                }
+            }
+            
+
             Rectangle close_btn = { GetScreenWidth() - 160, GetScreenHeight() - 70, 140, 50 };
             if(CheckCollisionPointRec(GetMousePosition(), close_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
                 game->current_state = GAME_STATE_HUMAN_TURN;
@@ -427,6 +455,13 @@ void InitGame(Game* game) {
     game->pending_skill_card_index = -1;
     game->shop_page = 0; // [新] 預設為基礎牌商店頁面
 
+    // 初始化技能牌商店（所有角色、所有類型）
+    for (int i = 0; i < 10; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            game->shop_skill_piles[0][j] = initVector();
+        }
+    }
+    
     for(int i=0; i<3; ++i) for(int j=0; j<3; ++j) game->shop_piles[i][j] = initVector();
 
     for(int i=0; i<6; ++i) {
@@ -444,6 +479,19 @@ void InitGame(Game* game) {
         pushbackVector(&game->shop_piles[1][2], 203);
         pushbackVector(&game->shop_piles[2][2], 303);
     }
+
+    // 初始化小紅帽技能卡商店（角色ID = 0）
+    for (int i = 0; i < 2; ++i) {
+        pushbackVector(&game->shop_skill_piles[0][0], 601); // 攻LV2
+        pushbackVector(&game->shop_skill_piles[0][1], 602); // 防LV2
+        pushbackVector(&game->shop_skill_piles[0][2], 603); // 移LV2
+    }
+    for (int i = 0; i < 3; ++i) {
+        pushbackVector(&game->shop_skill_piles[0][0], 701); // 攻LV3
+        pushbackVector(&game->shop_skill_piles[0][1], 702); // 防LV3
+        pushbackVector(&game->shop_skill_piles[0][2], 703); // 移LV3
+    }
+
 }
 
 // shuffle_deck 函式 - 保持不變

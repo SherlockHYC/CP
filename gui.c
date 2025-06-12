@@ -449,10 +449,33 @@ void DrawShop(const Game* game) {
             }
         }
     } else if (game->shop_page == 1) {
-        // 繪製技能牌商店 (目前為空)
-        const char* coming_soon_text = "Feature coming soon!";
-        Vector2 text_size = MeasureTextEx(font, coming_soon_text, 40, 2);
-        DrawTextEx(font, coming_soon_text, (Vector2){screenWidth / 2 - text_size.x / 2, screenHeight / 2}, 40, 2, GRAY);
+        int chara = game->inner_game.players[0].character;
+
+        if (chara == RED_HOOD) {
+            for (int type = 0; type < 3; ++type) {
+                const vector* pile = &game->shop_skill_piles[chara][type];
+                for (uint32_t i = 0; i < pile->SIZE; ++i) {
+                    const Card* card = get_card_info(pile->array[i]);
+                    if (!card) continue;
+
+                    float x = 200 + (i % 5) * (CARD_WIDTH + 30);
+                    float y = 250 + type * 250 + (i / 5) * (CARD_HEIGHT + 20);
+                    Rectangle bounds = { x, y, CARD_WIDTH, CARD_HEIGHT };
+                    DrawCard(card, bounds, false, false);
+
+                    DrawText(TextFormat("Cost: %d", card->cost), x + CARD_WIDTH + 10, y + 20, 18, WHITE);
+                    DrawText(TextFormat("剩餘: %d", pile->SIZE), x + CARD_WIDTH + 10, y + 45, 18, WHITE);
+                }
+            }
+        } else {
+            // 顯示「即將開放」
+            const char* msg = "此角色尚未開放技能商店";
+            Vector2 msg_size = MeasureTextEx(font, msg, 32, 1);
+            DrawTextEx(font, msg, (Vector2){
+                (GetScreenWidth() - msg_size.x) / 2, 
+                GetScreenHeight() / 2
+            }, 32, 1, GRAY);
+        }
     }
     
     // 繪製關閉按鈕

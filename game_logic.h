@@ -25,6 +25,7 @@ typedef struct Game {
     bool player_has_acted;
 
     vector shop_piles[3][3];
+    vector shop_skill_piles[10][3];  // [新增] 技能牌商店：10角色 * 3技能類型（每種有LV2/LV3）
     int pending_move_distance; 
     int turn_count;
     int pending_skill_card_index;

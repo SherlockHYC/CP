@@ -3,7 +3,14 @@
 
 #define DEF_CARD(id, name, type, lvl, val, cst) {id, name, type, lvl, val, cst}
 
+
 const Card card_database[] = {
+    
+    /*
+    基本卡牌ID含意
+    1(攻擊 防禦 移動) 0(角色ID小紅帽) 1(卡片等級)
+    */
+   
     // Basic Cards (Cost is for buying from the shop)
     DEF_CARD(101, "Attack LV1",      ATTACK,  1, 1, 1),
     DEF_CARD(102, "Attack LV2",      ATTACK,  2, 2, 3),
@@ -16,11 +23,26 @@ const Card card_database[] = {
     DEF_CARD(303, "Move LV3",        MOVE,    3, 3, 6),
     DEF_CARD(401, "Crystal",         GENERIC, 0, 1, 0),
 
+    /*
+    技能卡牌ID含意
+    5(技能等級5為等級1，6為等級2，7為等級3) 0(角色ID小紅帽) 1(攻擊 防禦 移動)
+    */
+
     // --- Character Skill Cards ---
     // [Red Hood]
     DEF_CARD(501, "[RH] Wolf Claw",      SKILL, 1, 2, 1), // ATK
+    DEF_CARD(601, "[RH] 精準射擊",        SKILL, 2, 2, 2), // 射程2 傷害2+O
+    DEF_CARD(701, "[RH] 致命狙擊",        SKILL, 3, 3, 4), // 射程3 傷害3+0
+    
     DEF_CARD(502, "[RH] Dodge",          SKILL, 1, 0, 1), // DEF
+    DEF_CARD(602, "[RH] 電流護盾",        SKILL, 2, 2, 2), // 射程2 傷害2
+    DEF_CARD(702, "[RH] 終極護盾",        SKILL, 3, 3, 4), // 射程3 傷害3
+    
     DEF_CARD(503, "[RH] Quick Step",     SKILL, 1, 0, 1), // MOV
+    DEF_CARD(603, "[RH] 火力噴射",        SKILL, 2, 2, 2), // 射程2 傷害2 擊退
+    DEF_CARD(703, "[RH] 暴怒噴射",        SKILL, 3, 3, 4), // 射程3 傷害3 擊退
+
+    
     // [Snow White]
     DEF_CARD(511, "[SW] Poison Apple",   SKILL, 1, 1, 2), // ATK
     DEF_CARD(512, "[SW] Dwarves' Guard", SKILL, 1, 0, 1), // DEF

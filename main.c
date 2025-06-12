@@ -27,12 +27,16 @@ int main(int argc, char *argv[])
     const int screenHeight = 800;
     InitWindow(screenWidth, screenHeight, "Twisted Fables - GUI Edition");
 
+
+
     if (!IsWindowReady()) {
         printf("ERROR: Failed to initialize window.\n");
         return 1;
     }
 
-    font = GetFontDefault();
+    // ✅ 在這裡載入中文點陣字型（建議放在 assets/fonts）
+    font = LoadFont("assets/fonts/Cubic_11.ttf");
+    //font = GetFontDefault();
     backgroundTexture = LoadTexture("background.png");
 
     character_images[0] = LoadTexture("assets/redhood.png");
@@ -76,10 +80,20 @@ int main(int argc, char *argv[])
     }
 
     // --- Cleanup ---
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            freeVector(&game->shop_piles[i][j]);
+
+    for (int i = 0; i < 10; ++i)
+        for (int j = 0; j < 3; ++j)
+            freeVector(&game->shop_skill_piles[i][j]);
+
     free(game); // Free the allocated memory for the game struct
     UnloadTexture(backgroundTexture);
+    UnloadFont(font);
     CloseWindow();
 
+    
     return 0;
 }
 

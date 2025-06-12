@@ -50,3 +50,7 @@ void eraseVector(vector* vec, int index) {
     // 將大小減一
     vec->SIZE--;
 }
+
+void freeVector(vector* v) {
+    v->SIZE = 0;
+}
