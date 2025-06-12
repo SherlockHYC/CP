@@ -337,6 +337,15 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
          DrawBattleInterface(game);
     }
 
+    // [新] 繪製對局中的退出按鈕
+    if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
+        Rectangle exit_btn = { 20, 20, 100, 40 };
+        bool hover = CheckCollisionPointRec(GetMousePosition(), exit_btn);
+        DrawRectangleRec(exit_btn, hover ? RED : MAROON);
+        DrawRectangleLinesEx(exit_btn, 2, BLACK);
+        DrawTextEx(font, "Exit", (Vector2){ exit_btn.x + 30, exit_btn.y + 10 }, 20, 1, WHITE);
+    }
+
     // --- 繪製疊加層 (Overlays) ---
     switch (game->current_state) {
         case GAME_STATE_SHOP:

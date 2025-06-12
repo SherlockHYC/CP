@@ -55,10 +55,16 @@ void end_turn(Game* game) {
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
         case GAME_STATE_CHOOSE_CHAR: {
+            // [修正] 更新此處的座標計算以符合新的 gui.c
             for(int i = 0; i < 10; i++) {
-                // [修正] 增加Y軸的間距 (120 -> 240)，以符合圖案加入後，第二排按鈕的實際位置
-                Rectangle btn_bounds = {200.0f + (i % 5) * 180, 250.0f + (i / 5) * 240, 160, 80};
-                
+                int row = i / 5;
+                float extra_y = (row == 1) ? 40.0f : 0.0f;
+                Rectangle btn_bounds = {
+                    200.0f + (i % 5) * 180.0f,
+                    280.0f + row * 200.0f + extra_y,
+                    160,
+                    80
+                };
                 if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     init_player_deck(&game->inner_game.players[0], (CharacterType)i);
                     init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
@@ -72,7 +78,6 @@ void UpdateGame(Game* game, bool* should_close) {
                     while(p1->hand.SIZE < 6) { draw_card(p1); }
                     
                     start_turn(game);
-                    
                     return;
                 }
             }
@@ -305,13 +310,22 @@ void UpdateGame(Game* game, bool* should_close) {
             break;
         }
     }
+
+    // [新] 新增對局中的退出按鈕邏輯
+    if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
+        Rectangle exit_btn = { 20, 20, 100, 40 };
+        if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            InitGame(game); // 重置遊戲返回主選單
+            return; // 立即返回以避免其他邏輯衝突
+        }
+    }
+    
+    // 遊戲結束檢查
     if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
         if (game->inner_game.players[0].life <= 0) { game->message = "You Lose!"; game->current_state = GAME_STATE_GAME_OVER; }
         if (game->inner_game.players[1].life <= 0) { game->message = "You Win!"; game->current_state = GAME_STATE_GAME_OVER; }
     }
 }
-
-
 
 // init_player_deck 函式 - 保持不變
 void init_player_deck(player* p, CharacterType character) {
