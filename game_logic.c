@@ -55,42 +55,27 @@ void end_turn(Game* game) {
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
         case GAME_STATE_CHOOSE_CHAR: {
-            const float CARD_BTN_X = 200.0f;
-            const float CARD_BTN_Y = 280.0f;
-            const float CARD_BTN_W = 160;
-            const float CARD_BTN_H = 80;
-            const float ROW_GAP = 200.0f;
-            const float COL_GAP = 180.0f;
-
-            for (int i = 0; i < 10; i++) {
-                int row = i / 5;
-                float extra_y = (row == 1) ? 40.0f : 0.0f;
-
-                Rectangle btn_bounds = {
-                    CARD_BTN_X + (i % 5) * COL_GAP,
-                    CARD_BTN_Y + row * ROW_GAP + extra_y,
-                    CARD_BTN_W,
-                    CARD_BTN_H
-                };
-
+            for(int i = 0; i < 10; i++) {
+                // [修正] 增加Y軸的間距 (120 -> 240)，以符合圖案加入後，第二排按鈕的實際位置
+                Rectangle btn_bounds = {200.0f + (i % 5) * 180, 250.0f + (i / 5) * 240, 160, 80};
+                
                 if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     init_player_deck(&game->inner_game.players[0], (CharacterType)i);
                     init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
+                    
                     game->inner_game.players[0].locate[0] = 6;
                     game->inner_game.players[1].locate[0] = 4;
 
-                    // ✅ 合併進來的補牌邏輯
                     player* p0 = &game->inner_game.players[0];
                     while(p0->hand.SIZE < 4) { draw_card(p0); }
-
                     player* p1 = &game->inner_game.players[1];
                     while(p1->hand.SIZE < 6) { draw_card(p1); }
-
+                    
                     start_turn(game);
+                    
                     return;
                 }
             }
-
             Rectangle exit_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 *should_close = true;
@@ -118,17 +103,40 @@ void UpdateGame(Game* game, bool* should_close) {
             }
 
             player* human = &game->inner_game.players[0];
+            player* opponent = &game->inner_game.players[1];
+            int distance = abs(human->locate[0] - opponent->locate[0]);
+
             int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
             float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
             float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
 
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
                 Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
-                if (CheckCollisionPointRec(GetMousePosition(), card_bounds)) {
-                    card_bounds.y -= 20;
-                }
                 if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                    apply_card_effect(game, i);
+                    
+                    const Card* card = get_card_info(human->hand.array[i]);
+                    if (!card) continue;
+
+                    bool can_play = true;
+                    if (card->type == ATTACK) {
+                        if (distance > 1) {
+                            can_play = false;
+                            game->message = "No target in range!";
+                        }
+                    } else if (card->type == SKILL) {
+                        int skill_subtype = card->id % 10;
+                        if (skill_subtype == 1) {
+                            if (distance > 2) {
+                                can_play = false;
+                                game->message = "No target in range!";
+                            }
+                        }
+                    }
+
+                    if (can_play) {
+                        apply_card_effect(game, i);
+                    }
+                    
                     break;
                 }
             }
@@ -140,7 +148,6 @@ void UpdateGame(Game* game, bool* should_close) {
             break;
         }
         case GAME_STATE_SHOP: {
-            // 處理頁籤切換
             Rectangle basic_tab = { GetScreenWidth() / 2.0f - 210, 150, 200, 40 };
             Rectangle skill_tab = { GetScreenWidth() / 2.0f + 10, 150, 200, 40 };
             if (CheckCollisionPointRec(GetMousePosition(), basic_tab) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -180,7 +187,6 @@ void UpdateGame(Game* game, bool* should_close) {
                 }
             }
             
-            // 關閉商店按鈕
             Rectangle close_btn = { GetScreenWidth() - 160, GetScreenHeight() - 70, 140, 50 };
             if(CheckCollisionPointRec(GetMousePosition(), close_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
                 game->current_state = GAME_STATE_HUMAN_TURN;
@@ -237,23 +243,19 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
-        // [修改] 更新等待基礎牌的邏輯
         case GAME_STATE_AWAITING_BASIC_FOR_SKILL: {
             player* human = &game->inner_game.players[0];
-
-            // 從已選擇的技能牌，判斷出需要的基礎牌類型
             const Card* pending_skill_card = get_card_info(human->hand.array[game->pending_skill_card_index]);
-            if (!pending_skill_card) break; // 安全檢查
+            if (!pending_skill_card) break;
 
             CardType required_type;
             switch (pending_skill_card->id % 10) {
                 case 1: required_type = ATTACK; break;
                 case 2: required_type = DEFENSE; break;
                 case 3: required_type = MOVE; break;
-                default: required_type = GENERIC; break; // 無效類型
+                default: required_type = GENERIC; break;
             }
 
-            // 更新提示訊息
             if (required_type == ATTACK) game->message = "Select an Attack card to use.";
             else if (required_type == DEFENSE) game->message = "Select a Defense card to use.";
             else if (required_type == MOVE) game->message = "Select a Move card to use.";
@@ -262,15 +264,11 @@ void UpdateGame(Game* game, bool* should_close) {
             float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
             float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
 
-            // 檢查玩家點擊
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-                // 跳過技能牌本身
                 if ((int)i == game->pending_skill_card_index) continue;
-
                 const Card* card_to_check = get_card_info(human->hand.array[i]);
                 if (!card_to_check) continue;
 
-                // 檢查卡牌類型是否符合要求
                 if (card_to_check->type == required_type) {
                     Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
                     if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -280,7 +278,6 @@ void UpdateGame(Game* game, bool* should_close) {
                 }
             }
             
-            // 檢查取消按鈕
             Rectangle cancel_btn = { GetScreenWidth() / 2.0f - 100, GetScreenHeight() / 2.0f + 50, 200, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), cancel_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 game->current_state = GAME_STATE_HUMAN_TURN;
@@ -313,6 +310,8 @@ void UpdateGame(Game* game, bool* should_close) {
         if (game->inner_game.players[1].life <= 0) { game->message = "You Win!"; game->current_state = GAME_STATE_GAME_OVER; }
     }
 }
+
+
 
 // init_player_deck 函式 - 保持不變
 void init_player_deck(player* p, CharacterType character) {
@@ -482,7 +481,6 @@ void apply_movement(Game* game, int direction) {
     game->message = "You moved!";
 }
 
-// apply_card_effect 函式 - 保持不變
 void apply_card_effect(Game* game, int card_hand_index) {
     int player_id = game->inner_game.now_turn_player_id;
     player* attacker = &game->inner_game.players[player_id];
@@ -496,27 +494,46 @@ void apply_card_effect(Game* game, int card_hand_index) {
     if (type == SKILL) {
         game->pending_skill_card_index = card_hand_index;
         game->current_state = GAME_STATE_AWAITING_BASIC_FOR_SKILL;
-        game->message = "Select a Basic Card (ATK/DEF/MOV) to use.";
+        // The message will be updated in the AWAITING_BASIC state
         return;
     }
 
     int32_t played_card_id = card->id;
-    if (type == ATTACK || type == DEFENSE || type == GENERIC) {
+    
+    // [修改] 攻擊基礎牌的處理邏輯
+    if (type == ATTACK) {
+        player* defender = &game->inner_game.players[(player_id + 1) % 2];
+        
+        // 計算距離並檢查射程
+        int distance = abs(attacker->locate[0] - defender->locate[0]);
+        int range = 1; // 攻擊基礎牌射程為 1
+
+        if (distance <= range) {
+            // 在射程內，造成傷害
+            int damage = card->value;
+            if(defender->defense >= damage) {
+                defender->defense -= damage;
+            } else { 
+                int damage_left = damage - defender->defense;
+                defender->defense = 0;
+                if (defender->life <= damage_left) defender->life = 0;
+                else defender->life -= damage_left;
+            }
+        } else {
+            // 不在射程內，不造成傷害
+            game->message = "Out of range!";
+        }
+        attacker->energy += card->value; // 無論是否在射程內，都獲得能量
+    } 
+    // 防禦與泛用牌的處理邏輯
+    else if (type == DEFENSE || type == GENERIC) {
         attacker->energy += card->value;
-        if(type == ATTACK) {
-             player* defender = &game->inner_game.players[(player_id + 1) % 2];
-             int damage = card->value;
-             if(defender->defense >= damage) { defender->defense -= damage; }
-             else { 
-                 int damage_left = damage - defender->defense;
-                 defender->defense = 0;
-                 if (defender->life <= damage_left) defender->life = 0;
-                 else defender->life -= damage_left;
-             }
-        } else if (type == DEFENSE) {
+        if (type == DEFENSE) {
             attacker->defense += card->value;
         }
-    } else if (type == MOVE) {
+    } 
+    // 移動牌的處理邏輯
+    else if (type == MOVE) {
         attacker->energy += card->value;
         game->pending_move_distance = card->value;
         game->current_state = GAME_STATE_CHOOSE_MOVE_DIRECTION;

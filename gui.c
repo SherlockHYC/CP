@@ -215,21 +215,47 @@ void DrawGameBoard(const Game* game) {
     DrawTextEx(font, TextFormat("%d", game->inner_game.players[0].graveyard.SIZE), (Vector2){discard_rect.x + 30, discard_rect.y + 40}, 24, 1, WHITE);
 }
 
-// DrawBattleInterface 函式 - 保持不變
 void DrawBattleInterface(const Game* game) {
     const player* human = &game->inner_game.players[0];
+    const player* bot = &game->inner_game.players[1];
+    int distance = abs(human->locate[0] - bot->locate[0]);
+
     int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
     float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
     float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
     
+    // 繪製玩家手牌
     for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
         Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
         bool is_hovered = CheckCollisionPointRec(GetMousePosition(), card_bounds);
         const Card* card_info = get_card_info(human->hand.array[i]);
+        
+        // 繪製基礎卡牌
         DrawCard(card_info, card_bounds, is_hovered, false);
+
+        // [修改] 檢查可玩性並在需要時繪製遮罩
+        bool is_playable = true;
+        if (card_info) {
+            if (card_info->type == ATTACK) {
+                if (distance > 1) { // 基礎攻擊牌的射程檢查
+                    is_playable = false;
+                }
+            } else if (card_info->type == SKILL) {
+                if (card_info->id % 10 == 1) { // 攻擊技能牌的檢查
+                    if (distance > 2) { // 攻擊技能牌的射程檢查
+                        is_playable = false;
+                    }
+                }
+            }
+        }
+
+        if (!is_playable) {
+            DrawRectangleRec(card_bounds, Fade(BLACK, 0.6f));
+            DrawRectangleLinesEx(card_bounds, 3, RED); // 加上紅色邊框以示警告
+        }
     }
     
-    const player* bot = &game->inner_game.players[1];
+    // 繪製 Bot 手牌
     int bot_hand_width = bot->hand.SIZE * (CARD_WIDTH/1.5f + 10) - 10;
     float bot_hand_start_x = (GetScreenWidth() - bot_hand_width) / 2.0f;
     for (uint32_t i = 0; i < bot->hand.SIZE; ++i) {
@@ -238,6 +264,7 @@ void DrawBattleInterface(const Game* game) {
         DrawRectangleRoundedLinesEx(bot_card, 0.08f, 10, 4, BLUE);
     }
     
+    // 繪製操作按鈕
     Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
     bool et_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
     DrawRectangleRec(end_turn_btn, et_hover ? LIME : GREEN);
@@ -253,6 +280,7 @@ void DrawBattleInterface(const Game* game) {
     DrawRectangleRec(shop_btn, shop_hover ? SKYBLUE : BLUE);
     DrawTextEx(font, "Shop", (Vector2){ shop_btn.x + 65, shop_btn.y + 15 }, 20, 1, WHITE);
 
+    // 繪製回合提示
     const char* turn_text = "";
     if (game->inner_game.now_turn_player_id == 0) {
         turn_text = "Your Turn";
