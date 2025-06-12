@@ -18,24 +18,36 @@ void apply_focus_remove(Game* game, int choice);
 void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx);
 
 
-// end_turn 函式 - 保持不變
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
     
+    // 1. 當前回合玩家棄置所有手牌
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         pushbackVector(&p->graveyard, p->hand.array[i]);
     }
     clearVector(&p->hand);
     
+    // 2. 重置能量和防禦
     p->energy = 0;
     p->defense = 0;
     
+    // 3. [新防護機制] 計算總牌數並決定抽牌目標
+    // 此時手牌已空，總牌數等於牌庫 + 棄牌堆
+    uint32_t total_cards = p->deck.SIZE + p->graveyard.SIZE;
     int target_hand_size = 6;
+
+    // 如果總牌數少於標準手牌上限，則只抽到總牌數的量
+    if (total_cards < 6) {
+        target_hand_size = total_cards;
+    }
+    
+    // 4. 為下個回合抽出新的手牌
     while(p->hand.SIZE < (uint32_t)target_hand_size) {
         draw_card(p);
     }
     
+    // 5. 交換玩家順序並開始新回合
     game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
