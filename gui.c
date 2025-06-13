@@ -20,7 +20,7 @@ void DrawSkillPairingOverlay(const Game* game);
 void apply_buy_card(Game* game, int card_id);
 
 // =================================================================
-//                      繪製函式
+//                               繪製函式
 // =================================================================
 
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card) {
@@ -347,7 +347,7 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
     DrawPlayerInfo(game, true);
     DrawPlayerInfo(game, false);
     if (game->current_state != GAME_STATE_SHOP && game->current_state != GAME_STATE_FOCUS_REMOVE) {
-         DrawBattleInterface(game);
+        DrawBattleInterface(game);
     }
 
     // [新] 繪製對局中的退出按鈕
@@ -397,7 +397,8 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
 }
 
 
-// [修改] DrawShop 函式，調整排版
+
+// [修改] DrawShop 函式，將技能牌分頁改為堆疊顯示相同卡牌
 void DrawShop(const Game* game) {
     float screenWidth = GetScreenWidth();
     float screenHeight = GetScreenHeight();
@@ -405,7 +406,7 @@ void DrawShop(const Game* game) {
     DrawTextEx(font, "Shop", (Vector2){screenWidth / 2 - MeasureTextEx(font, "Shop", 60, 2).x / 2, 40}, 60, 2, GOLD);
     DrawTextEx(font, TextFormat("Your Energy: %d", game->inner_game.players[0].energy), (Vector2){40, 40}, 30, 1, WHITE);
     
-    // 繪製頁籤按鈕
+    // --- 繪製頁籤按鈕 ---
     Rectangle basic_tab = { screenWidth / 2.0f - 210, 150, 200, 40 };
     Rectangle skill_tab = { screenWidth / 2.0f + 10, 150, 200, 40 };
 
@@ -423,14 +424,11 @@ void DrawShop(const Game* game) {
     DrawTextEx(font, skill_text, (Vector2){ skill_tab.x + (skill_tab.width - skill_text_size.x) / 2, skill_tab.y + 10 }, 20, 1, BLACK);
     DrawRectangleLinesEx(skill_tab, 2, BLACK);
 
-    // 根據當前頁面繪製對應內容
+    // --- 根據當前頁面繪製對應內容 ---
     if (game->shop_page == 0) {
-        // [修改] 調整基礎牌商店的排版以使其更平均分佈
-        // 定義每一欄的寬度，包含卡牌和右側文字的空間
+        // --- 基礎牌頁面 (採用 3x3 動態置中網格) ---
         float column_width = 300; 
-        // 計算內容總寬度
         float total_content_width = 3 * column_width;
-        // 計算起始 X 座標以使其置中
         float startX = (screenWidth - total_content_width) / 2.0f;
         
         float top_bound = 210;
@@ -438,25 +436,23 @@ void DrawShop(const Game* game) {
         float total_area_height = bottom_bound - top_bound;
         float row_spacing = total_area_height / 3.0f;
 
-        for (int type = 0; type < 3; type++) { // 3 橫列 (Attack, Defense, Move)
+        for (int type = 0; type < 3; type++) { 
             float row_center_y = top_bound + (row_spacing * type) + (row_spacing / 2.0f);
             float card_start_y = row_center_y - (CARD_HEIGHT / 2.0f);
 
-            for (int level = 0; level < 3; level++) { // 3 直行 (LV1, LV2, LV3)
+            for (int level = 0; level < 3; level++) {
                 const vector* pile = &game->shop_piles[type][level];
                 if (pile->SIZE > 0) {
                     const Card* card = get_card_info(pile->array[0]);
                     if(card) {
-                        // 計算每一張卡牌的 X 座標
                         float card_start_x = startX + (level * column_width);
                         Rectangle bounds = {card_start_x, card_start_y, CARD_WIDTH, CARD_HEIGHT};
                         bool hovered = CheckCollisionPointRec(GetMousePosition(), bounds);
                         DrawCard(card, bounds, hovered, false);
                         
-                        // 將文字繪製在卡牌右側
                         float text_x = bounds.x + CARD_WIDTH + 20;
-                        DrawText(TextFormat("Cost: %d", card->cost), text_x, bounds.y + 40, 20, WHITE);
-                        DrawText(TextFormat("Left: %d", pile->SIZE), text_x, bounds.y + 70, 20, WHITE);
+                        DrawTextEx(font, TextFormat("Cost: %d", card->cost), (Vector2){text_x, bounds.y + 40}, 20, 1, WHITE);
+                        DrawTextEx(font, TextFormat("Left: %d", pile->SIZE), (Vector2){text_x, bounds.y + 70}, 20, 1, WHITE);
                     }
                 }
             }
@@ -564,12 +560,13 @@ void DrawShop(const Game* game) {
     }
 
     
-    // 繪製關閉按鈕
+    // --- 繪製關閉按鈕 ---
     Rectangle close_btn = { screenWidth - 160, screenHeight - 70, 140, 50 };
     bool hover = CheckCollisionPointRec(GetMousePosition(), close_btn);
     DrawRectangleRec(close_btn, hover ? RED : MAROON);
     DrawTextEx(font, "Close", (Vector2){close_btn.x + 45, close_btn.y + 15}, 20, 1, WHITE);
 }
+
 
 void DrawSkillPairingOverlay(const Game* game) {
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
