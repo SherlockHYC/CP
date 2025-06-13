@@ -16,6 +16,8 @@ void apply_movement(Game* game, int direction);
 void apply_buy_card(Game* game, int card_id);
 void apply_focus_remove(Game* game, int choice);
 void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx);
+void apply_knockback(Game* game, int direction);
+
 
 
 void end_turn(Game* game) {
@@ -55,7 +57,6 @@ void end_turn(Game* game) {
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
         case GAME_STATE_CHOOSE_CHAR: {
-            // [修正] 更新此處的座標計算以符合新的 gui.c
             for(int i = 0; i < 10; i++) {
                 int row = i / 5;
                 float extra_y = (row == 1) ? 40.0f : 0.0f;
@@ -130,8 +131,10 @@ void UpdateGame(Game* game, bool* should_close) {
                         }
                     } else if (card->type == SKILL) {
                         int skill_subtype = card->id % 10;
-                        if (skill_subtype == 1) {
-                            if (distance > 2) {
+                        // (Notice) 攻擊或移動技能都需要檢查射程
+                        if (skill_subtype == 1 || skill_subtype == 3) {
+                            int range = card->level; // 使用卡牌等級作為射程
+                            if (distance > range) {
                                 can_play = false;
                                 game->message = "No target in range!";
                             }
@@ -198,27 +201,26 @@ void UpdateGame(Game* game, bool* should_close) {
                 if (chara == RED_HOOD) {
                     for (int type = 0; type < 3; ++type) {
                             const vector* pile = &game->shop_skill_piles[chara][type];
-                            if (!pile || pile->SIZE == 0) continue;  // ⛑️ 防止錯誤進入未初始化卡堆
+                            if (!pile || pile->SIZE == 0) continue;
 
                             for (uint32_t i = 0; i < pile->SIZE; ++i) {
                                 const Card* card = get_card_info(pile->array[i]);
                                 if (!card) continue;
 
-                            float x = 200 + (i % 5) * (CARD_WIDTH + 30);
-                            float y = 250 + type * 250 + (i / 5) * (CARD_HEIGHT + 20);
-                            Rectangle bounds = { x, y, CARD_WIDTH, CARD_HEIGHT };
+                                float x = 200 + (i % 5) * (CARD_WIDTH + 30);
+                                float y = 250 + type * 250 + (i / 5) * (CARD_HEIGHT + 20);
+                                Rectangle bounds = { x, y, CARD_WIDTH, CARD_HEIGHT };
 
-                            if (CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                                apply_buy_card(game, card->id);
-                                return;
+                                if (CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                                    apply_buy_card(game, card->id);
+                                    return;
+                                }
                             }
-                        }
                     }
                 } else {
                     game->message = "技能商店尚未支援此角色！";
                 }
             }
-            
 
             Rectangle close_btn = { GetScreenWidth() - 160, GetScreenHeight() - 70, 140, 50 };
             if(CheckCollisionPointRec(GetMousePosition(), close_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
@@ -339,16 +341,14 @@ void UpdateGame(Game* game, bool* should_close) {
         }
     }
 
-    // [新] 新增對局中的退出按鈕邏輯
     if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
         Rectangle exit_btn = { 20, 20, 100, 40 };
         if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-            InitGame(game); // 重置遊戲返回主選單
-            return; // 立即返回以避免其他邏輯衝突
+            InitGame(game);
+            return;
         }
     }
     
-    // 遊戲結束檢查
     if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
         if (game->inner_game.players[0].life <= 0) { game->message = "You Lose!"; game->current_state = GAME_STATE_GAME_OVER; }
         if (game->inner_game.players[1].life <= 0) { game->message = "You Win!"; game->current_state = GAME_STATE_GAME_OVER; }
@@ -668,24 +668,49 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
 
     if (!skill_card || !basic_card) return;
 
-    // 結算技能效果 (此處以造成傷害為例)
-    if (skill_card->value > 0) {
-        int damage = skill_card->value;
-        if(defender->defense >= damage) {
-            defender->defense -= damage;
-        } else { 
-            int damage_left = damage - defender->defense;
-            defender->defense = 0;
-            if(defender->life <= damage_left) defender->life = 0;
-            else defender->life -= damage_left;
+    if (attacker->character == RED_HOOD && skill_card->type == SKILL) {
+        // (Notice) 小紅帽攻擊技能
+        if (skill_card->id % 10 == 1) {
+            int base_damage = skill_card->level;
+            int bonus_damage = basic_card->value;
+            int total_damage = base_damage + bonus_damage;
+            
+            if(defender->defense >= total_damage) defender->defense -= total_damage;
+            else { 
+                int dmg_left = total_damage - defender->defense;
+                defender->defense = 0;
+                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
+            }
+            game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
+        
+        // (Notice) 小紅帽移動技能
+        } else if (skill_card->id % 10 == 3) {
+            int damage = skill_card->level; // 傷害等於技能等級
+            if(defender->defense >= damage) defender->defense -= damage;
+            else {
+                int dmg_left = damage - defender->defense;
+                defender->defense = 0;
+                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
+            }
+            game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, damage);
         }
+
+    } else {
+        // 其他角色或技能的通用邏輯
+        if (skill_card->value > 0) {
+            int damage = skill_card->value;
+            if(defender->defense >= damage) defender->defense -= damage;
+            else { 
+                int dmg_left = damage - defender->defense;
+                defender->defense = 0;
+                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
+            }
+        }
+        game->message = TextFormat("Used %s!", skill_card->name);
     }
 
-    // 將兩張牌都移至棄牌堆
     int32_t skill_id = skill_card->id;
     int32_t basic_id = basic_card->id;
-
-    // 為了避免索引錯亂，永遠先移除索引較大的那張牌
     if (skill_idx > basic_idx) {
         eraseVector(&attacker->hand, skill_idx);
         eraseVector(&attacker->hand, basic_idx);
@@ -693,13 +718,10 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
         eraseVector(&attacker->hand, basic_idx);
         eraseVector(&attacker->hand, skill_idx);
     }
-
     pushbackVector(&attacker->graveyard, skill_id);
     pushbackVector(&attacker->graveyard, basic_id);
 
-    // 更新遊戲狀態
     game->player_has_acted = true;
+    game->pending_skill_card_index = -1;
     game->current_state = GAME_STATE_HUMAN_TURN;
-    game->message = TextFormat("Used %s!", skill_card->name);
-    game->pending_skill_card_index = -1; // 清除待處理的技能牌
 }
