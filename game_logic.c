@@ -612,7 +612,6 @@ void apply_card_effect(Game* game, int card_hand_index) {
 void apply_buy_card(Game* game, int card_id) {
     player* buyer = &game->inner_game.players[game->inner_game.now_turn_player_id];
     const Card* card_to_buy = get_card_info(card_id);
-
     if (!card_to_buy) return;
 
     if (buyer->energy < card_to_buy->cost) {
@@ -621,19 +620,37 @@ void apply_buy_card(Game* game, int card_id) {
     }
 
     bool found_in_supply = false;
+
+    // 對基礎卡商店搜尋
     for(int type=0; type < 3; ++type) {
         for(int lvl=0; lvl<3; ++lvl) {
             vector* pile = &game->shop_piles[type][lvl];
             if(pile->SIZE > 0 && pile->array[0] == card_id) {
                 popbackVector(pile);
                 found_in_supply = true;
-                break;
+                goto BUY_DONE;
             }
         }
-        if(found_in_supply) break;
     }
-    
-    if(!found_in_supply) {
+
+    // 對技能卡商店搜尋（僅限當前角色）
+    int chara = buyer->character;
+    // 技能卡商店搜尋（從後往前找，移除符合的最頂層卡）
+    for (int type = 0; type < 3; ++type) {
+        vector* pile = &game->shop_skill_piles[chara][type];
+        if (pile->SIZE == 0) continue;
+
+        // 技能卡從上往下畫，但邏輯上從後往前檢查
+        for (int i = pile->SIZE - 1; i >= 0; --i) {
+            if (pile->array[i] == card_id) {
+                removeVectorAt(pile, i);  // 你需要實作這個函式
+                found_in_supply = true;
+                goto BUY_DONE;
+            }
+        }
+    }
+BUY_DONE:
+    if (!found_in_supply) {
         game->message = "This card is sold out!";
         return;
     }
@@ -643,7 +660,6 @@ void apply_buy_card(Game* game, int card_id) {
     game->message = TextFormat("Bought %s!", card_to_buy->name);
     game->player_has_acted = true;
 }
-
 // apply_focus_remove 函式 - 保持不變
 void apply_focus_remove(Game* game, int choice) {
     player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];

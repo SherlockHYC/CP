@@ -54,3 +54,11 @@ void eraseVector(vector* vec, int index) {
 void freeVector(vector* v) {
     v->SIZE = 0;
 }
+
+void removeVectorAt(vector* v, int index) {
+    if (index < 0 || index >= (int)v->SIZE) return;
+    for (int i = index; i < (int)v->SIZE - 1; ++i) {
+        v->array[i] = v->array[i + 1];
+    }
+    v->SIZE--;
+}

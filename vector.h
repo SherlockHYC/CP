@@ -20,4 +20,6 @@ void eraseVector(vector* vec, int index);
 
 void freeVector(vector* v);
 
+void removeVectorAt(vector* v, int index);
+
 #endif
