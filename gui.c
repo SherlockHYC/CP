@@ -347,7 +347,7 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
     DrawPlayerInfo(game, true);
     DrawPlayerInfo(game, false);
     if (game->current_state != GAME_STATE_SHOP && game->current_state != GAME_STATE_FOCUS_REMOVE) {
-         DrawBattleInterface(game);
+        DrawBattleInterface(game);
     }
 
     // [新] 繪製對局中的退出按鈕
@@ -395,6 +395,7 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
             break;
     }
 }
+
 
 
 // [修改] DrawShop 函式，將技能牌分頁改為堆疊顯示相同卡牌

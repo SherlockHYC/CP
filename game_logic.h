@@ -14,7 +14,6 @@ typedef enum {
     GAME_STATE_CHOOSE_MOVE_DIRECTION,
     GAME_STATE_FOCUS_REMOVE,
     GAME_STATE_AWAITING_BASIC_FOR_SKILL,
-    GAME_STATE_CHOOSE_KNOCKBACK_DIRECTION // [新增] 選擇擊退方向的狀態
 } GameState;
 
 // Main Game Struct
@@ -26,7 +25,7 @@ typedef struct Game {
     bool player_has_acted;
 
     vector shop_piles[3][3];
-    vector shop_skill_piles[10][3];  // [新增] 技能牌商店：10角色 * 3技能類型（每種有LV2/LV3）
+    vector shop_skill_piles[10][3];
     int pending_move_distance; 
     int turn_count;
     int pending_skill_card_index;

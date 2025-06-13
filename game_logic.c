@@ -131,9 +131,8 @@ void UpdateGame(Game* game, bool* should_close) {
                         }
                     } else if (card->type == SKILL) {
                         int skill_subtype = card->id % 10;
-                        // (Notice) 攻擊或移動技能都需要檢查射程
                         if (skill_subtype == 1 || skill_subtype == 3) {
-                            int range = card->level; // 使用卡牌等級作為射程
+                            int range = card->level;
                             if (distance > range) {
                                 can_play = false;
                                 game->message = "No target in range!";
@@ -321,6 +320,7 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
+        // (Notice) 移除 GAME_STATE_CHOOSE_KNOCKBACK_DIRECTION 的 case
         case GAME_STATE_BOT_TURN: {
             game->bot_action_timer -= GetFrameTime();
             if (game->bot_action_timer <= 0) {
@@ -669,8 +669,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     if (!skill_card || !basic_card) return;
 
     if (attacker->character == RED_HOOD && skill_card->type == SKILL) {
-        // (Notice) 小紅帽攻擊技能
-        if (skill_card->id % 10 == 1) {
+        if (skill_card->id % 10 == 1) { // 攻擊技能
             int base_damage = skill_card->level;
             int bonus_damage = basic_card->value;
             int total_damage = base_damage + bonus_damage;
@@ -683,18 +682,31 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             }
             game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
         
-        // (Notice) 小紅帽移動技能
-        } else if (skill_card->id % 10 == 3) {
-            int damage = skill_card->level; // 傷害等於技能等級
+        } else if (skill_card->id % 10 == 3) { // 移動技能
+            // 1. 造成傷害
+            int damage = skill_card->level;
             if(defender->defense >= damage) defender->defense -= damage;
             else {
                 int dmg_left = damage - defender->defense;
                 defender->defense = 0;
                 if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
             }
-            game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, damage);
-        }
+            
+            // (Notice) 2. 自動判斷方向並執行擊退
+            int knockback_dist = basic_card->value;
+            int direction = (defender->locate[0] > attacker->locate[0]) ? 1 : -1;
+            
+            for (int i = 0; i < knockback_dist; i++) {
+                int next_pos = defender->locate[0] + direction;
+                // 檢查邊界碰撞
+                if (next_pos < 0 || next_pos > 10) break;
+                // 與攻擊者的碰撞已在移動邏輯中處理，此處確保不會重疊
+                if (next_pos == attacker->locate[0]) break;
+                defender->locate[0] = next_pos;
+            }
 
+            game->message = TextFormat("Dealt %d damage & knocked back!", damage);
+        }
     } else {
         // 其他角色或技能的通用邏輯
         if (skill_card->value > 0) {
@@ -709,6 +721,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
         game->message = TextFormat("Used %s!", skill_card->name);
     }
 
+    // 將兩張牌都移至棄牌堆
     int32_t skill_id = skill_card->id;
     int32_t basic_id = basic_card->id;
     if (skill_idx > basic_idx) {
@@ -723,5 +736,5 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
 
     game->player_has_acted = true;
     game->pending_skill_card_index = -1;
-    game->current_state = GAME_STATE_HUMAN_TURN;
+    game->current_state = GAME_STATE_HUMAN_TURN; // (Notice) 直接返回玩家回合
 }
