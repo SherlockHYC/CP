@@ -452,13 +452,15 @@ void DrawShop(const Game* game) {
     } 
 
     if (game->shop_page == 1) {
+        float offsetX = 200;  // 往右移動 200px
+        float offsetY = 100;  // 往下移動 100px
         int chara = game->inner_game.players[0].character;
-        DrawTextEx(font, "攻擊技能", (Vector2){ 100, 110 }, 22, 1, RED);
-        DrawTextEx(font, "防禦技能", (Vector2){ 300, 110 }, 22, 1, DARKGREEN);
-        DrawTextEx(font, "移動技能", (Vector2){ 500, 110 }, 22, 1, PURPLE);
+        DrawTextEx(font, "攻擊技能", (Vector2){ 100 + offsetX, 110 + offsetY }, 22, 1, RED);
+        DrawTextEx(font, "防禦技能", (Vector2){ 400 + offsetX, 110 + offsetY }, 22, 1, DARKGREEN);
+        DrawTextEx(font, "移動技能", (Vector2){ 700 + offsetX, 110 + offsetY }, 22, 1, PURPLE);
 
         if (chara != 0) {
-            DrawTextEx(font, "技能商店尚未開放", (Vector2){ 400, 200 }, 28, 1, RED);
+            DrawTextEx(font, "技能商店尚未開放", (Vector2){ 400 + offsetX, 200 + offsetY }, 28, 1, RED);
             return;
         }
 
@@ -468,8 +470,8 @@ void DrawShop(const Game* game) {
             for (uint32_t i = 0; i < pile->SIZE; ++i) {
                 int card_id = pile->array[i];
                 Rectangle card_rect = {
-                    100 + type * 200,
-                    150 + i * 40,
+                    80 + offsetX + type * 300,
+                    150 + offsetY + i * 40,
                     CARD_WIDTH, CARD_HEIGHT
                 };
 
