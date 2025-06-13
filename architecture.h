@@ -48,6 +48,7 @@ typedef struct _player {
         int32_t atkRise;
         int32_t atkRiseTime;
         int8_t usedmeta1;
+        int8_t usedmeta2;
     } sleepingBeauty;
 
     // alice 3
@@ -183,7 +184,7 @@ SHUFFLE_POSION_TO_DECK        int8_t       shuffle posion to deck instead of put
 CHOOSE_CARD_BACK              int32_t      shuffle back the target card from graveyard to deck(0:cancel, value:index of card, **1 base**)
 
 SLEEP_ATK_HERTSELF            int32_t      sleeping beauty's skill hert herself(hint:you can check the last card you use to avoid cheating)
-USE_AWAKEN_TOKEN                int8_t       use awaken token when using skill(at most 3)
+USE_AWAKEN_TOKEN              int8_t       use awaken token when using skill(at most 3)
 LOST_LIFE_FOR_USESKILL        int8_t       sleeping beauty's metamorphosis, (choose lose 0(not trigger),2,4,6 life)
 RECYCLE_CARD                  int32_t      sleeping beauty's metamorphosis, (choose a card from graveyard(0 is not trigger, 1 base))
 
