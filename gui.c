@@ -18,7 +18,7 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
 void DrawSkillPairingOverlay(const Game* game);
 
 // =================================================================
-//                      繪製函式
+//                               繪製函式
 // =================================================================
 
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card) {
@@ -384,7 +384,7 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
 }
 
 
-// [修改] DrawShop 函式，調整排版
+// [修改] DrawShop 函式，將技能牌分頁改為堆疊顯示相同卡牌
 void DrawShop(const Game* game) {
     float screenWidth = GetScreenWidth();
     float screenHeight = GetScreenHeight();
@@ -392,7 +392,7 @@ void DrawShop(const Game* game) {
     DrawTextEx(font, "Shop", (Vector2){screenWidth / 2 - MeasureTextEx(font, "Shop", 60, 2).x / 2, 40}, 60, 2, GOLD);
     DrawTextEx(font, TextFormat("Your Energy: %d", game->inner_game.players[0].energy), (Vector2){40, 40}, 30, 1, WHITE);
     
-    // 繪製頁籤按鈕
+    // --- 繪製頁籤按鈕 ---
     Rectangle basic_tab = { screenWidth / 2.0f - 210, 150, 200, 40 };
     Rectangle skill_tab = { screenWidth / 2.0f + 10, 150, 200, 40 };
 
@@ -410,14 +410,11 @@ void DrawShop(const Game* game) {
     DrawTextEx(font, skill_text, (Vector2){ skill_tab.x + (skill_tab.width - skill_text_size.x) / 2, skill_tab.y + 10 }, 20, 1, BLACK);
     DrawRectangleLinesEx(skill_tab, 2, BLACK);
 
-    // 根據當前頁面繪製對應內容
+    // --- 根據當前頁面繪製對應內容 ---
     if (game->shop_page == 0) {
-        // [修改] 調整基礎牌商店的排版以使其更平均分佈
-        // 定義每一欄的寬度，包含卡牌和右側文字的空間
+        // --- 基礎牌頁面 (採用 3x3 動態置中網格) ---
         float column_width = 300; 
-        // 計算內容總寬度
         float total_content_width = 3 * column_width;
-        // 計算起始 X 座標以使其置中
         float startX = (screenWidth - total_content_width) / 2.0f;
         
         float top_bound = 210;
@@ -425,65 +422,112 @@ void DrawShop(const Game* game) {
         float total_area_height = bottom_bound - top_bound;
         float row_spacing = total_area_height / 3.0f;
 
-        for (int type = 0; type < 3; type++) { // 3 橫列 (Attack, Defense, Move)
+        for (int type = 0; type < 3; type++) { 
             float row_center_y = top_bound + (row_spacing * type) + (row_spacing / 2.0f);
             float card_start_y = row_center_y - (CARD_HEIGHT / 2.0f);
 
-            for (int level = 0; level < 3; level++) { // 3 直行 (LV1, LV2, LV3)
+            for (int level = 0; level < 3; level++) {
                 const vector* pile = &game->shop_piles[type][level];
                 if (pile->SIZE > 0) {
                     const Card* card = get_card_info(pile->array[0]);
                     if(card) {
-                        // 計算每一張卡牌的 X 座標
                         float card_start_x = startX + (level * column_width);
                         Rectangle bounds = {card_start_x, card_start_y, CARD_WIDTH, CARD_HEIGHT};
                         bool hovered = CheckCollisionPointRec(GetMousePosition(), bounds);
                         DrawCard(card, bounds, hovered, false);
                         
-                        // 將文字繪製在卡牌右側
                         float text_x = bounds.x + CARD_WIDTH + 20;
-                        DrawText(TextFormat("Cost: %d", card->cost), text_x, bounds.y + 40, 20, WHITE);
-                        DrawText(TextFormat("Left: %d", pile->SIZE), text_x, bounds.y + 70, 20, WHITE);
+                        DrawTextEx(font, TextFormat("Cost: %d", card->cost), (Vector2){text_x, bounds.y + 40}, 20, 1, WHITE);
+                        DrawTextEx(font, TextFormat("Left: %d", pile->SIZE), (Vector2){text_x, bounds.y + 70}, 20, 1, WHITE);
                     }
                 }
             }
         }
     } else if (game->shop_page == 1) {
+        // --- 技能牌頁面 (重構為動態置中佈局，並堆疊相同卡牌) ---
         int chara = game->inner_game.players[0].character;
+        
+        // 檢查此角色是否有任何可購買的技能牌
+        bool skills_available = false;
+        for (int type = 0; type < 3; ++type) {
+            if (game->shop_skill_piles[chara][type].SIZE > 0) {
+                skills_available = true;
+                break;
+            }
+        }
 
-        if (chara == RED_HOOD) {
-            for (int type = 0; type < 3; ++type) {
+        if (skills_available) {
+            // 與基礎牌頁面類似的垂直間距計算
+            float top_bound = 210;
+            float bottom_bound = screenHeight - 90;
+            float total_area_height = bottom_bound - top_bound;
+            float row_spacing = total_area_height / 3.0f;
+
+            for (int type = 0; type < 3; ++type) { // 3 橫列 (ATK, DEF, MOV skills)
                 const vector* pile = &game->shop_skill_piles[chara][type];
-                for (uint32_t i = 0; i < pile->SIZE; ++i) {
-                    const Card* card = get_card_info(pile->array[i]);
+                if (pile->SIZE == 0) continue;
+
+                // 1. 找出所有不重複的卡牌ID及其數量
+                int32_t unique_ids[10]; // 假設每種技能類型最多10種不重複的卡
+                int counts[10];
+                int unique_count = 0;
+
+                for (uint32_t i = 0; i < pile->SIZE; i++) {
+                    int32_t current_id = pile->array[i];
+                    bool found = false;
+                    for (int j = 0; j < unique_count; j++) {
+                        if (unique_ids[j] == current_id) {
+                            counts[j]++;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found && unique_count < 10) {
+                        unique_ids[unique_count] = current_id;
+                        counts[unique_count] = 1;
+                        unique_count++;
+                    }
+                }
+
+                // 2. 計算此橫列的卡牌總寬度以便置中
+                float column_width = 280; // 每張卡牌及其文字佔的寬度
+                float row_content_width = unique_count * column_width;
+                float row_start_x = (screenWidth - row_content_width) / 2.0f;
+
+                float row_center_y = top_bound + (row_spacing * type) + (row_spacing / 2.0f);
+                float card_start_y = row_center_y - (CARD_HEIGHT / 2.0f);
+
+                // 3. 繪製不重複的卡牌
+                for (int i = 0; i < unique_count; ++i) {
+                    const Card* card = get_card_info(unique_ids[i]);
                     if (!card) continue;
 
-                    float x = 200 + (i % 5) * (CARD_WIDTH + 30);
-                    float y = 250 + type * 250 + (i / 5) * (CARD_HEIGHT + 20);
-                    Rectangle bounds = { x, y, CARD_WIDTH, CARD_HEIGHT };
-                    DrawCard(card, bounds, false, false);
+                    float card_start_x = row_start_x + i * column_width;
+                    Rectangle bounds = { card_start_x, card_start_y, CARD_WIDTH, CARD_HEIGHT };
+                    bool hovered = CheckCollisionPointRec(GetMousePosition(), bounds);
+                    DrawCard(card, bounds, hovered, false);
 
-                    DrawText(TextFormat("Cost: %d", card->cost), x + CARD_WIDTH + 10, y + 20, 18, WHITE);
-                    DrawText(TextFormat("剩餘: %d", pile->SIZE), x + CARD_WIDTH + 10, y + 45, 18, WHITE);
+                    // 在卡牌右側顯示資訊
+                    float text_x = card_start_x + CARD_WIDTH + 20;
+                    DrawTextEx(font, TextFormat("Cost: %d", card->cost), (Vector2){text_x, card_start_y + 40}, 20, 1, WHITE);
+                    DrawTextEx(font, TextFormat("Left: %d", counts[i]), (Vector2){text_x, card_start_y + 70}, 20, 1, WHITE);
                 }
             }
         } else {
-            // 顯示「即將開放」
+            // 若無技能牌則顯示提示訊息
             const char* msg = "此角色尚未開放技能商店";
             Vector2 msg_size = MeasureTextEx(font, msg, 32, 1);
-            DrawTextEx(font, msg, (Vector2){
-                (GetScreenWidth() - msg_size.x) / 2, 
-                GetScreenHeight() / 2
-            }, 32, 1, GRAY);
+            DrawTextEx(font, msg, (Vector2){ (screenWidth - msg_size.x) / 2, screenHeight / 2 }, 32, 1, GRAY);
         }
     }
     
-    // 繪製關閉按鈕
+    // --- 繪製關閉按鈕 ---
     Rectangle close_btn = { screenWidth - 160, screenHeight - 70, 140, 50 };
     bool hover = CheckCollisionPointRec(GetMousePosition(), close_btn);
     DrawRectangleRec(close_btn, hover ? RED : MAROON);
     DrawTextEx(font, "Close", (Vector2){close_btn.x + 45, close_btn.y + 15}, 20, 1, WHITE);
 }
+
 
 void DrawSkillPairingOverlay(const Game* game) {
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
