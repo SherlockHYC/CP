@@ -17,6 +17,7 @@ void DrawCharSelection(Texture2D character_images[10]);
 void DrawPlayerInfo(const Game* game, bool is_human);
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card);
 void DrawSkillPairingOverlay(const Game* game);
+void apply_buy_card(Game* game, int card_id);
 
 // =================================================================
 //                      繪製函式
@@ -44,21 +45,32 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
         } else if (card->type == MOVE) {
             DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, PURPLE);
         } else if (card->type == SKILL) {
-            // [修改] 根據卡牌ID的尾數判斷技能類型
-            const char* skill_type_text = "Skill";
             int subtype = card->id % 10;
+
+            // 判斷技能等級（根據 id 區間）
+            int level = 0;
+            if (card->id >= 500 && card->id < 600) level = 1;
+            else if (card->id >= 600 && card->id < 700) level = 2;
+            else if (card->id >= 700 && card->id < 800) level = 3;
+
+            const char* skill_type_text = "Skill";
             switch (subtype) {
-                case 1: skill_type_text = "[ATK] Skill"; break;
-                case 2: skill_type_text = "[DEF] Skill"; break;
-                case 3: skill_type_text = "[MOV] Skill"; break;
+                case 1: skill_type_text = TextFormat("[ATK] Skill%d", level); break;
+                case 2: skill_type_text = TextFormat("[DEF] Skill%d", level); break;
+                case 3: skill_type_text = TextFormat("[MOV] Skill%d", level); break;
             }
+
             DrawTextEx(font, skill_type_text, (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, BLUE);
         }
+
         
         // --- 能量獲取標籤 ---
         if (card->type == ATTACK || card->type == DEFENSE || card->type == MOVE || card->type == GENERIC) {
              DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
         }
+
+        // --- 顯示卡片 cost ---
+        //DrawTextEx(font, TextFormat("Cost: %d", card->cost), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 18 }, 14, 1, ORANGE);
     }
 }
 
@@ -457,7 +469,6 @@ void DrawShop(const Game* game) {
         int chara = game->inner_game.players[0].character;
 
         if (chara == 0) {
-            // ✅ 小紅帽才畫技能
             DrawTextEx(font, "攻擊技能", (Vector2){ 100 + offsetX, 110 + offsetY }, 22, 1, RED);
             DrawTextEx(font, "防禦技能", (Vector2){ 400 + offsetX, 110 + offsetY }, 22, 1, DARKGREEN);
             DrawTextEx(font, "移動技能", (Vector2){ 700 + offsetX, 110 + offsetY }, 22, 1, PURPLE);
@@ -465,7 +476,22 @@ void DrawShop(const Game* game) {
             for (int type = 0; type < 3; ++type) {
                 const vector* pile = &game->shop_skill_piles[0][type];
 
-                int lv3_count = 0;
+                int lv3_count = 0, lv2_count = 0;
+                
+                // LV3 卡
+                int lv3_index = -1;
+                bool lv2_empty = true;
+
+                // 先找最上層的 LV3 卡牌（從後往前找）
+                for (int i = pile->SIZE - 1; i >= 0; --i) {
+                    if (pile->array[i] >= 700 && pile->array[i] < 800 && lv3_index == -1) {
+                        lv3_index = i;
+                    }
+                    if (pile->array[i] >= 600 && pile->array[i] < 700) {
+                        lv2_empty = false; // 只要還有 LV2 就設為 false
+                    }
+                }
+
                 for (uint32_t i = 0; i < pile->SIZE; ++i) {
                     int card_id = pile->array[i];
                     if (card_id >= 700 && card_id < 800) {
@@ -474,13 +500,31 @@ void DrawShop(const Game* game) {
                             150 + offsetY + lv3_count * 40,
                             CARD_WIDTH, CARD_HEIGHT
                         };
+
                         const Card* card = get_card_by_id(card_id);
-                        DrawCard(card, card_rect, false, false);
+
+                        bool is_top = ((int)i == lv3_index);
+                        bool can_hover = is_top && lv2_empty;
+                        bool hovered = can_hover && CheckCollisionPointRec(GetMousePosition(), card_rect);
+
+                        if (hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                            apply_buy_card((Game*)game, card_id);
+                        }
+
+                        DrawCard(card, card_rect, hovered, false);
                         lv3_count++;
                     }
                 }
 
-                int lv2_count = 0;
+                // LV2 卡
+                int lv2_index = -1;
+                for (int i = pile->SIZE - 1; i >= 0; --i) {
+                    if (pile->array[i] >= 600 && pile->array[i] < 700) {
+                        lv2_index = i;
+                        break;
+                    }
+                }
+
                 for (uint32_t i = 0; i < pile->SIZE; ++i) {
                     int card_id = pile->array[i];
                     if (card_id >= 600 && card_id < 700) {
@@ -489,17 +533,36 @@ void DrawShop(const Game* game) {
                             150 + offsetY + (lv3_count + lv2_count) * 40,
                             CARD_WIDTH, CARD_HEIGHT
                         };
+
                         const Card* card = get_card_by_id(card_id);
-                        DrawCard(card, card_rect, false, false);
+
+                        bool is_top = ((int)i == lv2_index);
+                        bool hovered = is_top && CheckCollisionPointRec(GetMousePosition(), card_rect);
+                        if (hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                            apply_buy_card((Game*)game, card_id);
+                        }
+
+                        DrawCard(card, card_rect, hovered, false);
                         lv2_count++;
                     }
                 }
+                // ➕ 顯示當前 cost
+                int cost = (lv2_count > 0) ? 2 : 4;
+                char cost_text[32];
+                sprintf(cost_text, "Cost: %d", cost);
+                Vector2 cost_pos = {
+                    100 + offsetX + type * 300 + 10,
+                    300 + offsetY + (lv3_count + lv2_count) * 40 + 5
+                };
+                DrawTextEx(font, cost_text, cost_pos, 20, 1, ORANGE);
             }
         } else {
-            // ❌ 非小紅帽顯示尚未開放
+
             DrawTextEx(font, "技能商店尚未開放", (Vector2){ 330 + offsetX, 300 + offsetY }, 28, 1, RED);
+        
         }
     }
+
     
     // 繪製關閉按鈕
     Rectangle close_btn = { screenWidth - 160, screenHeight - 70, 140, 50 };
