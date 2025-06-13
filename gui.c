@@ -455,29 +455,49 @@ void DrawShop(const Game* game) {
         float offsetX = 200;  // 往右移動 200px
         float offsetY = 100;  // 往下移動 100px
         int chara = game->inner_game.players[0].character;
-        DrawTextEx(font, "攻擊技能", (Vector2){ 100 + offsetX, 110 + offsetY }, 22, 1, RED);
-        DrawTextEx(font, "防禦技能", (Vector2){ 400 + offsetX, 110 + offsetY }, 22, 1, DARKGREEN);
-        DrawTextEx(font, "移動技能", (Vector2){ 700 + offsetX, 110 + offsetY }, 22, 1, PURPLE);
 
-        if (chara != 0) {
-            DrawTextEx(font, "技能商店尚未開放", (Vector2){ 400 + offsetX, 200 + offsetY }, 28, 1, RED);
-            return;
-        }
+        if (chara == 0) {
+            // ✅ 小紅帽才畫技能
+            DrawTextEx(font, "攻擊技能", (Vector2){ 100 + offsetX, 110 + offsetY }, 22, 1, RED);
+            DrawTextEx(font, "防禦技能", (Vector2){ 400 + offsetX, 110 + offsetY }, 22, 1, DARKGREEN);
+            DrawTextEx(font, "移動技能", (Vector2){ 700 + offsetX, 110 + offsetY }, 22, 1, PURPLE);
 
-        for (int type = 0; type < 3; ++type) {
-            const vector* pile = &game->shop_skill_piles[0][type];
+            for (int type = 0; type < 3; ++type) {
+                const vector* pile = &game->shop_skill_piles[0][type];
 
-            for (uint32_t i = 0; i < pile->SIZE; ++i) {
-                int card_id = pile->array[i];
-                Rectangle card_rect = {
-                    80 + offsetX + type * 300,
-                    150 + offsetY + i * 40,
-                    CARD_WIDTH, CARD_HEIGHT
-                };
+                int lv3_count = 0;
+                for (uint32_t i = 0; i < pile->SIZE; ++i) {
+                    int card_id = pile->array[i];
+                    if (card_id >= 700 && card_id < 800) {
+                        Rectangle card_rect = {
+                            80 + offsetX + type * 300,
+                            150 + offsetY + lv3_count * 40,
+                            CARD_WIDTH, CARD_HEIGHT
+                        };
+                        const Card* card = get_card_by_id(card_id);
+                        DrawCard(card, card_rect, false, false);
+                        lv3_count++;
+                    }
+                }
 
-                const Card* card = get_card_by_id(card_id);
-                DrawCard(card, card_rect, false, false);
+                int lv2_count = 0;
+                for (uint32_t i = 0; i < pile->SIZE; ++i) {
+                    int card_id = pile->array[i];
+                    if (card_id >= 600 && card_id < 700) {
+                        Rectangle card_rect = {
+                            80 + offsetX + type * 300,
+                            150 + offsetY + (lv3_count + lv2_count) * 40,
+                            CARD_WIDTH, CARD_HEIGHT
+                        };
+                        const Card* card = get_card_by_id(card_id);
+                        DrawCard(card, card_rect, false, false);
+                        lv2_count++;
+                    }
+                }
             }
+        } else {
+            // ❌ 非小紅帽顯示尚未開放
+            DrawTextEx(font, "技能商店尚未開放", (Vector2){ 330 + offsetX, 300 + offsetY }, 28, 1, RED);
         }
     }
     
