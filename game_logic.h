@@ -4,6 +4,10 @@
 #include "architecture.h"
 #include <stdbool.h>
 
+// (Notice) 將反擊效果的結構改為一個簡單的陣列，用索引代表玩家
+// int8_t pending_retaliation_level[2]; // [0] for player 0, [1] for player 1
+
+
 // GUI Game States
 typedef enum {
     GAME_STATE_CHOOSE_CHAR,
@@ -29,6 +33,9 @@ typedef struct Game {
     int pending_move_distance; 
     int turn_count;
     int pending_skill_card_index;
+
+    int8_t pending_retaliation_level[2];
+
 
     // [新] 新增一個變數來記錄當前的商店頁面 (0: 基礎牌, 1: 技能牌)
     int shop_page;

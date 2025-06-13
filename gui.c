@@ -254,7 +254,7 @@ void DrawBattleInterface(const Game* game) {
                     is_playable = false;
                 }
             } else if (card_info->type == SKILL) {
-                if (card_info->id % 10 == 1) { // 攻擊技能牌的檢查
+                if (card_info->id % 10 == 1|| card_info->id % 10 == 2 || card_info->id % 10 == 3) { // 攻擊技能牌的檢查
                     if (distance > 2) { // 攻擊技能牌的射程檢查
                         is_playable = false;
                     }

@@ -32,7 +32,7 @@ void end_turn(Game* game) {
     
     // 2. 重置能量和防禦
     p->energy = 0;
-    p->defense = 0;
+    // p->defense = 0;
     
     // 3. [新防護機制] 計算總牌數並決定抽牌目標
     // 此時手牌已空，總牌數等於牌庫 + 棄牌堆
@@ -131,7 +131,7 @@ void UpdateGame(Game* game, bool* should_close) {
                         }
                     } else if (card->type == SKILL) {
                         int skill_subtype = card->id % 10;
-                        if (skill_subtype == 1 || skill_subtype == 3) {
+                        if (skill_subtype == 1 || skill_subtype == 2 || skill_subtype == 3) {
                             int range = card->level;
                             if (distance > range) {
                                 can_play = false;
@@ -429,13 +429,43 @@ void init_player_deck(player* p, CharacterType character) {
 // start_turn 函式 - 保持不變
 void start_turn(Game* game) {
     game->turn_count++;
-    int player_id = game->inner_game.now_turn_player_id;
-    player* p = &game->inner_game.players[player_id];
+    int current_player_id = game->inner_game.now_turn_player_id;
+    player* p_current = &game->inner_game.players[current_player_id];
     
-    p->defense = 0;
+    // (Notice) 檢查的是「當前回合玩家」(p_current) 是否有待觸發的反擊效果
+    if (game->pending_retaliation_level[current_player_id] > 0 && p_current->defense > 0) {
+        player* p_opponent = &game->inner_game.players[(current_player_id + 1) % 2];
+        int level = game->pending_retaliation_level[current_player_id];
+        int damage = 0;
+        int range = 0;
+
+        switch(level) {
+            case 1: damage = 2; range = 1; break;
+            case 2: damage = 4; range = 2; break;
+            case 3: damage = 6; range = 3; break;
+        }
+
+        if (damage > 0) {
+            int distance = abs(p_current->locate[0] - p_opponent->locate[0]);
+            if (distance <= range) {
+                if(p_opponent->defense >= damage) {
+                    p_opponent->defense -= damage;
+                } else {
+                    int dmg_left = damage - p_opponent->defense;
+                    p_opponent->defense = 0;
+                    if(p_opponent->life <= dmg_left) p_opponent->life = 0; else p_opponent->life -= dmg_left;
+                }
+            }
+        }
+    }
+    
+    // (Notice) 清除當前回合玩家的待觸發效果，並重置防禦
+    game->pending_retaliation_level[current_player_id] = 0;
+    p_current->defense = 0;
+    
     game->player_has_acted = false;
     
-    if (player_id == 0) {
+    if (current_player_id == 0) {
         game->current_state = GAME_STATE_HUMAN_TURN;
         game->message = "Your Turn!";
     } else {
@@ -453,12 +483,15 @@ void InitGame(Game* game) {
     game->message = "Select Your Hero";
     game->turn_count = 0;
     game->pending_skill_card_index = -1;
-    game->shop_page = 0; // [新] 預設為基礎牌商店頁面
+    game->shop_page = 0;
+    
+    // (Notice) 初始化兩位玩家的反擊效果等級為 0
+    game->pending_retaliation_level[0] = 0;
+    game->pending_retaliation_level[1] = 0;
 
-    // 初始化技能牌商店（所有角色、所有類型）
     for (int i = 0; i < 10; ++i) {
         for (int j = 0; j < 3; ++j) {
-            game->shop_skill_piles[0][j] = initVector();
+            game->shop_skill_piles[i][j] = initVector();
         }
     }
     
@@ -480,18 +513,16 @@ void InitGame(Game* game) {
         pushbackVector(&game->shop_piles[2][2], 303);
     }
 
-    // 初始化小紅帽技能卡商店（角色ID = 0）
     for (int i = 0; i < 2; ++i) {
-        pushbackVector(&game->shop_skill_piles[0][0], 601); // 攻LV2
-        pushbackVector(&game->shop_skill_piles[0][1], 602); // 防LV2
-        pushbackVector(&game->shop_skill_piles[0][2], 603); // 移LV2
+        pushbackVector(&game->shop_skill_piles[RED_HOOD][0], 601);
+        pushbackVector(&game->shop_skill_piles[RED_HOOD][1], 602);
+        pushbackVector(&game->shop_skill_piles[RED_HOOD][2], 603);
     }
     for (int i = 0; i < 3; ++i) {
-        pushbackVector(&game->shop_skill_piles[0][0], 701); // 攻LV3
-        pushbackVector(&game->shop_skill_piles[0][1], 702); // 防LV3
-        pushbackVector(&game->shop_skill_piles[0][2], 703); // 移LV3
+        pushbackVector(&game->shop_skill_piles[RED_HOOD][0], 701);
+        pushbackVector(&game->shop_skill_piles[RED_HOOD][1], 702);
+        pushbackVector(&game->shop_skill_piles[RED_HOOD][2], 703);
     }
-
 }
 
 // shuffle_deck 函式 - 保持不變
@@ -676,8 +707,9 @@ void apply_focus_remove(Game* game, int choice) {
 }
 
 void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
-    player* attacker = &game->inner_game.players[0];
-    player* defender = &game->inner_game.players[1];
+    int player_id = game->inner_game.now_turn_player_id;
+    player* attacker = &game->inner_game.players[player_id];
+    player* defender = &game->inner_game.players[(player_id + 1) % 2];
     
     const Card* skill_card = get_card_info(attacker->hand.array[skill_idx]);
     const Card* basic_card = get_card_info(attacker->hand.array[basic_idx]);
@@ -685,7 +717,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     if (!skill_card || !basic_card) return;
 
     if (attacker->character == RED_HOOD && skill_card->type == SKILL) {
-        if (skill_card->id % 10 == 1) { // 攻擊技能
+        if (skill_card->id % 10 == 1) { 
             int base_damage = skill_card->level;
             int bonus_damage = basic_card->value;
             int total_damage = base_damage + bonus_damage;
@@ -698,8 +730,16 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             }
             game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
         
-        } else if (skill_card->id % 10 == 3) { // 移動技能
-            // 1. 造成傷害
+        } else if (skill_card->id % 10 == 2) { 
+            int defense_gain = basic_card->value;
+            attacker->defense += defense_gain;
+
+            // (Notice) 設定當前玩家的反擊效果等級
+            game->pending_retaliation_level[player_id] = skill_card->level;
+
+            game->message = TextFormat("Gained %d defense! Retaliation set!", defense_gain);
+
+        } else if (skill_card->id % 10 == 3) { 
             int damage = skill_card->level;
             if(defender->defense >= damage) defender->defense -= damage;
             else {
@@ -708,15 +748,12 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
                 if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
             }
             
-            // (Notice) 2. 自動判斷方向並執行擊退
             int knockback_dist = basic_card->value;
             int direction = (defender->locate[0] > attacker->locate[0]) ? 1 : -1;
             
             for (int i = 0; i < knockback_dist; i++) {
                 int next_pos = defender->locate[0] + direction;
-                // 檢查邊界碰撞
                 if (next_pos < 0 || next_pos > 10) break;
-                // 與攻擊者的碰撞已在移動邏輯中處理，此處確保不會重疊
                 if (next_pos == attacker->locate[0]) break;
                 defender->locate[0] = next_pos;
             }
@@ -724,7 +761,6 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             game->message = TextFormat("Dealt %d damage & knocked back!", damage);
         }
     } else {
-        // 其他角色或技能的通用邏輯
         if (skill_card->value > 0) {
             int damage = skill_card->value;
             if(defender->defense >= damage) defender->defense -= damage;
@@ -737,7 +773,6 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
         game->message = TextFormat("Used %s!", skill_card->name);
     }
 
-    // 將兩張牌都移至棄牌堆
     int32_t skill_id = skill_card->id;
     int32_t basic_id = basic_card->id;
     if (skill_idx > basic_idx) {
@@ -752,5 +787,5 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
 
     game->player_has_acted = true;
     game->pending_skill_card_index = -1;
-    game->current_state = GAME_STATE_HUMAN_TURN; // (Notice) 直接返回玩家回合
+    game->current_state = GAME_STATE_HUMAN_TURN;
 }
