@@ -27,7 +27,7 @@ const Card card_database[] = {
     技能卡牌ID含意
     5(技能等級5為等級1，6為等級2，7為等級3) 0(角色ID小紅帽) 1(攻擊 防禦 移動)
     */
-
+    //後面三個數字分別是射程 傷害 花費
     // --- Character Skill Cards ---
     // [Red Hood]
     DEF_CARD(501, "[RH] Wolf Claw",      SKILL, 1, 2, 1), // ATK
