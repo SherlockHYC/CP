@@ -35,7 +35,45 @@ int main(int argc, char *argv[])
     }
 
     // ✅ 在這裡載入中文點陣字型（建議放在 assets/fonts）
-    font = LoadFont("assets/fonts/Cubic_11.ttf");
+    // 分配足夠空間來存放中英文 + 數字 + 標點（20902 + 26*2 + 10 + 標點）
+    int total = 20902 + 26 + 26 + 10 + 8;
+    int *codepoints = malloc(sizeof(int) * total);
+    int idx = 0;
+
+    // 英文大寫 A-Z
+    for (int i = 0x41; i <= 0x5A; ++i) codepoints[idx++] = i;
+
+    // 英文小寫 a-z
+    for (int i = 0x61; i <= 0x7A; ++i) codepoints[idx++] = i;
+
+    // 數字 0-9
+    for (int i = 0x30; i <= 0x39; ++i) codepoints[idx++] = i;
+
+    // 基本標點（空格、冒號、句號、驚嘆號）
+    codepoints[idx++] = 0x20; // space
+    codepoints[idx++] = 0x3A; // :
+    codepoints[idx++] = 0x2E; // .
+    codepoints[idx++] = 0x21; // !
+    codepoints[idx++] = 0x2B; // +
+    codepoints[idx++] = 0x2D; // -
+    codepoints[idx++] = 0x5B; // [
+    codepoints[idx++] = 0x5D; // ]
+
+
+    // 中文區段：0x4E00 ~ 0x9FFF
+    for (int i = 0; i < 20902; ++i)
+        codepoints[idx++] = 0x4E00 + i;
+
+    // ✅ 載入字體
+    font = LoadFontEx("assets/fonts/Cubic_11.ttf", 32, codepoints, total);
+    SetTextureFilter(font.texture, TEXTURE_FILTER_POINT);
+
+    // ❗完成後釋放記憶體（避免記憶體洩漏）
+    free(codepoints);
+
+
+    //font = LoadFont("assets/fonts/Cubic_11.ttf");
+    //font = LoadFont("assets/fonts/NotoSansTC-Black.ttf");
     //font = GetFontDefault();
     backgroundTexture = LoadTexture("background.png");
 

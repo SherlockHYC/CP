@@ -1,6 +1,7 @@
 #include "gui.h"
 #include "definitions.h"
 #include "raylib.h"
+#include "database.h"
 
 // 外部變數與函式
 extern const char* character_names[];
@@ -323,7 +324,7 @@ void DrawFocusSelection(const Game* game) {
 
 void DrawGame(Game* game, Texture2D character_images[10]) {
     DrawTexture(backgroundTexture, 0, 0, WHITE);
-
+    
     if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
         DrawCharSelection(character_images);
         return;
@@ -448,33 +449,33 @@ void DrawShop(const Game* game) {
                 }
             }
         }
-    } else if (game->shop_page == 1) {
+    } 
+
+    if (game->shop_page == 1) {
         int chara = game->inner_game.players[0].character;
+        DrawTextEx(font, "攻擊技能", (Vector2){ 100, 110 }, 22, 1, RED);
+        DrawTextEx(font, "防禦技能", (Vector2){ 300, 110 }, 22, 1, DARKGREEN);
+        DrawTextEx(font, "移動技能", (Vector2){ 500, 110 }, 22, 1, PURPLE);
 
-        if (chara == RED_HOOD) {
-            for (int type = 0; type < 3; ++type) {
-                const vector* pile = &game->shop_skill_piles[chara][type];
-                for (uint32_t i = 0; i < pile->SIZE; ++i) {
-                    const Card* card = get_card_info(pile->array[i]);
-                    if (!card) continue;
+        if (chara != 0) {
+            DrawTextEx(font, "技能商店尚未開放", (Vector2){ 400, 200 }, 28, 1, RED);
+            return;
+        }
 
-                    float x = 200 + (i % 5) * (CARD_WIDTH + 30);
-                    float y = 250 + type * 250 + (i / 5) * (CARD_HEIGHT + 20);
-                    Rectangle bounds = { x, y, CARD_WIDTH, CARD_HEIGHT };
-                    DrawCard(card, bounds, false, false);
+        for (int type = 0; type < 3; ++type) {
+            const vector* pile = &game->shop_skill_piles[0][type];
 
-                    DrawText(TextFormat("Cost: %d", card->cost), x + CARD_WIDTH + 10, y + 20, 18, WHITE);
-                    DrawText(TextFormat("剩餘: %d", pile->SIZE), x + CARD_WIDTH + 10, y + 45, 18, WHITE);
-                }
+            for (uint32_t i = 0; i < pile->SIZE; ++i) {
+                int card_id = pile->array[i];
+                Rectangle card_rect = {
+                    100 + type * 200,
+                    150 + i * 40,
+                    CARD_WIDTH, CARD_HEIGHT
+                };
+
+                const Card* card = get_card_by_id(card_id);
+                DrawCard(card, card_rect, false, false);
             }
-        } else {
-            // 顯示「即將開放」
-            const char* msg = "此角色尚未開放技能商店";
-            Vector2 msg_size = MeasureTextEx(font, msg, 32, 1);
-            DrawTextEx(font, msg, (Vector2){
-                (GetScreenWidth() - msg_size.x) / 2, 
-                GetScreenHeight() / 2
-            }, 32, 1, GRAY);
         }
     }
     

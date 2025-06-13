@@ -8,9 +8,9 @@ const Card card_database[] = {
     
     /*
     基本卡牌ID含意
-    1(攻擊 防禦 移動) 0(角色ID小紅帽) 1(卡片等級)
+    1(攻擊 防禦 移動) 0(沒有意義) 1(卡片等級)
     */
-   
+
     // Basic Cards (Cost is for buying from the shop)
     DEF_CARD(101, "Attack LV1",      ATTACK,  1, 1, 1),
     DEF_CARD(102, "Attack LV2",      ATTACK,  2, 2, 3),
