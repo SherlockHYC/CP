@@ -284,10 +284,25 @@ void DrawBattleInterface(const Game* game) {
                     is_playable = false;
                 }
             } else if (card_info->type == SKILL) {
-                if (card_info->id % 10 == 1|| card_info->id % 10 == 2 || card_info->id % 10 == 3) { // 攻擊技能牌的檢查
-                    if (distance > 2) { // 攻擊技能牌的射程檢查
-                        is_playable = false;
+                int skill_subtype = card_info->id % 10;
+                int range = 0;
+                bool range_check_needed = false;
+
+                if (human->character == RED_HOOD) {
+                    if (skill_subtype == 1 || skill_subtype == 2 || skill_subtype == 3) {
+                        range = card_info->level;
+                        range_check_needed = true;
                     }
+                } else if (human->character == SNOW_WHITE) {
+                    // (Notice) 白雪公主的攻擊或防禦技能射程皆為 1
+                    if (skill_subtype == 1 || skill_subtype == 2) {
+                        range = 1;
+                        range_check_needed = true;
+                    }
+                }
+
+                if (range_check_needed && distance > range) {
+                    is_playable = false;
                 }
             }
         }

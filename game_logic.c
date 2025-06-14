@@ -131,12 +131,26 @@ void UpdateGame(Game* game, bool* should_close) {
                         }
                     } else if (card->type == SKILL) {
                         int skill_subtype = card->id % 10;
-                        if (skill_subtype == 1 || skill_subtype == 2 || skill_subtype == 3) {
-                            int range = card->level;
-                            if (distance > range) {
-                                can_play = false;
-                                game->message = "No target in range!";
+                        int range = 0;
+                        bool range_check_needed = false;
+
+                        // (Notice) 根據角色決定技能射程檢查邏輯
+                        if (human->character == RED_HOOD) {
+                            if (skill_subtype == 1 || skill_subtype == 2 || skill_subtype == 3) {
+                                range = card->level;
+                                range_check_needed = true;
                             }
+                        }
+                        else if (human->character == SNOW_WHITE) {
+                            if (skill_subtype == 1 || skill_subtype == 2) { // 攻擊或防禦技能
+                                range = 1; // 白雪公主的攻防技能射程固定為 1
+                                range_check_needed = true;
+                            }
+                        }
+
+                        if (range_check_needed && distance > range) {
+                            can_play = false;
+                            game->message = "No target in range!";
                         }
                     }
 
@@ -779,6 +793,16 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
                 if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
             }
             game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
+        }else if (skill_card->id % 10 == 2) { // (Notice) 白雪公主防禦技能
+            int damage = skill_card->level; // 傷害等於技能等級
+            
+            if(defender->defense >= damage) defender->defense -= damage;
+            else { 
+                int dmg_left = damage - defender->defense;
+                defender->defense = 0;
+                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
+            }
+            game->message = TextFormat("Used %s, dealing %d damage!", skill_card->name, damage);
         }
         // (此處可擴充白雪公主的其他技能)
 
