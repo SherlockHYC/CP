@@ -834,7 +834,8 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             for (int i = 0; i < cards_to_move; ++i) {
                 if (attacker->snowWhite.remindPosion.SIZE > 0) {
                     int poison_card_id = attacker->snowWhite.remindPosion.array[attacker->snowWhite.remindPosion.SIZE - 1];
-                    pushbackVector(&attacker->graveyard, poison_card_id);
+                    // (Notice) 目標從 attacker->graveyard 改為 defender->graveyard
+                    pushbackVector(&defender->graveyard, poison_card_id);
                     popbackVector(&attacker->snowWhite.remindPosion);
                     cards_moved++;
                 } else {
