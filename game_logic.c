@@ -803,6 +803,26 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
                 if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
             }
             game->message = TextFormat("Used %s, dealing %d damage!", skill_card->name, damage);
+        }else if (skill_card->id % 10 == 3) { // (Notice) 白雪公主移動技能
+            int damage = skill_card->level;
+            int range_bonus = skill_card->level - 1;
+            int total_range = basic_card->value + range_bonus;
+            int distance = abs(attacker->locate[0] - defender->locate[0]);
+            
+            if (distance <= total_range) {
+                if(defender->defense >= damage) defender->defense -= damage;
+                else { 
+                    int dmg_left = damage - defender->defense;
+                    defender->defense = 0;
+                    if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
+                }
+                game->message = TextFormat("Used %s, dealing %d damage!", skill_card->name, damage);
+            } else {
+                game->message = "Target out of range, skill failed!";
+                game->current_state = GAME_STATE_HUMAN_TURN;
+                game->pending_skill_card_index = -1;
+                return;
+            }
         }
         // (此處可擴充白雪公主的其他技能)
 
