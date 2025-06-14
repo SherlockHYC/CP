@@ -18,6 +18,10 @@ typedef enum {
     GAME_STATE_CHOOSE_MOVE_DIRECTION,
     GAME_STATE_FOCUS_REMOVE,
     GAME_STATE_AWAITING_BASIC_FOR_SKILL,
+
+    // ✅ 新增的狀態
+    GAME_STATE_PASSIVE_INFO,
+    GAME_STATE_BATTLE
 } GameState;
 
 // Main Game Struct

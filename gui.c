@@ -18,6 +18,7 @@ void DrawPlayerInfo(const Game* game, bool is_human);
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card);
 void DrawSkillPairingOverlay(const Game* game);
 void apply_buy_card(Game* game, int card_id);
+void DrawPassiveInfoOverlay(const Game* game);
 
 // =================================================================
 //                               繪製函式
@@ -93,6 +94,19 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
     DrawTextEx(font, TextFormat("HP: %d", p->life), (Vector2){ (float)x_pos + 15, (float)y_pos + 45 }, 20, 1, LIME);
     DrawTextEx(font, TextFormat("Defense: %d", p->defense), (Vector2){ (float)x_pos + 110, (float)y_pos + 45 }, 20, 1, GRAY);
     DrawTextEx(font, TextFormat("Energy: %d", p->energy), (Vector2){ (float)x_pos + 210, (float)y_pos + 45 }, 20, 1, SKYBLUE);
+
+        // 被動技能按鈕（僅在玩家一側顯示）
+    if (is_human) {
+        Rectangle passive_btn = { x_pos + 160, y_pos - 50, 40, 40 };
+        bool hover = CheckCollisionPointRec(GetMousePosition(), passive_btn);
+        DrawRectangleRec(passive_btn, hover ? SKYBLUE : BLUE);
+        DrawRectangleLinesEx(passive_btn, 2, WHITE);
+        DrawTextEx(font, "P", (Vector2){ passive_btn.x + 12, passive_btn.y + 8 }, 20, 2, WHITE);
+
+        if (hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            ((Game*)game)->current_state = GAME_STATE_PASSIVE_INFO;
+        }
+    }
 }
 
 //介面參數
@@ -240,7 +254,8 @@ void DrawBattleInterface(const Game* game) {
     // 繪製玩家手牌
     for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
         Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
-        bool is_hovered = CheckCollisionPointRec(GetMousePosition(), card_bounds);
+        bool is_hovered = (game->current_state != GAME_STATE_PASSIVE_INFO) &&
+                        CheckCollisionPointRec(GetMousePosition(), card_bounds);
         const Card* card_info = get_card_info(human->hand.array[i]);
         
         // 繪製基礎卡牌
@@ -278,20 +293,33 @@ void DrawBattleInterface(const Game* game) {
     }
     
     // 繪製操作按鈕
-    Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
-    bool et_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
-    DrawRectangleRec(end_turn_btn, et_hover ? LIME : GREEN);
-    DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 15 }, 20, 1, BLACK);
+// === End Turn 按鈕 ===
+Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
+bool et_hover = false;
+if (game->current_state == GAME_STATE_HUMAN_TURN) {
+    et_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
+}
+DrawRectangleRec(end_turn_btn, et_hover ? LIME : GREEN);
+DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 15 }, 20, 1, BLACK);
 
-    Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
-    bool focus_hover = CheckCollisionPointRec(GetMousePosition(), focus_btn);
-    DrawRectangleRec(focus_btn, game->player_has_acted ? GRAY : (focus_hover ? YELLOW : GOLD));
-    DrawTextEx(font, "Focus", (Vector2){ focus_btn.x + 60, focus_btn.y + 15 }, 20, 1, BLACK);
+// === Focus 按鈕 ===
+Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
+bool focus_hover = false;
+if (game->current_state == GAME_STATE_HUMAN_TURN && !game->player_has_acted) {
+    focus_hover = CheckCollisionPointRec(GetMousePosition(), focus_btn);
+}
+DrawRectangleRec(focus_btn, game->player_has_acted ? GRAY : (focus_hover ? YELLOW : GOLD));
+DrawTextEx(font, "Focus", (Vector2){ focus_btn.x + 60, focus_btn.y + 15 }, 20, 1, BLACK);
 
-    Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
-    bool shop_hover = CheckCollisionPointRec(GetMousePosition(), shop_btn);
-    DrawRectangleRec(shop_btn, shop_hover ? SKYBLUE : BLUE);
-    DrawTextEx(font, "Shop", (Vector2){ shop_btn.x + 65, shop_btn.y + 15 }, 20, 1, WHITE);
+// === Shop 按鈕 ===
+Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
+bool shop_hover = false;
+if (game->current_state == GAME_STATE_HUMAN_TURN) {
+    shop_hover = CheckCollisionPointRec(GetMousePosition(), shop_btn);
+}
+DrawRectangleRec(shop_btn, shop_hover ? SKYBLUE : BLUE);
+DrawTextEx(font, "Shop", (Vector2){ shop_btn.x + 65, shop_btn.y + 15 }, 20, 1, WHITE);
+
 
     // 繪製回合提示
     const char* turn_text = "";
@@ -393,6 +421,10 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
         }
         default:
             break;
+    }
+
+    if (game->current_state == GAME_STATE_PASSIVE_INFO) {
+        DrawPassiveInfoOverlay(game);
     }
 }
 
@@ -610,5 +642,39 @@ void DrawSkillPairingOverlay(const Game* game) {
                 DrawRectangleRoundedLinesEx(card_bounds, 0.08f, 10, 3, LIME);
             }
         }
+    }
+}
+
+void DrawPassiveInfoOverlay(const Game* game) {
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+    DrawTextEx(font, "角色被動技能", (Vector2){ 100, 80 }, 40, 2, WHITE);
+
+    const player* p = &game->inner_game.players[0];
+    int chara = p->character;
+
+    switch (chara) {
+        case 0: // 小紅帽
+            DrawTextEx(font, "- 可儲存3張攻擊牌並強化輸出", (Vector2){ 120, 160 }, 24, 1, LIME);
+            break;
+        case 1: // 白雪公主
+            DrawTextEx(font, "- 中毒標記會持續傷害敵人", (Vector2){ 120, 160 }, 24, 1, GREEN);
+            break;
+        case 2: // 睡美人
+            DrawTextEx(font, "- 可累積覺醒點數並進行爆發", (Vector2){ 120, 160 }, 24, 1, SKYBLUE);
+            break;
+        // 其他角色依需求增加
+        default:
+            DrawTextEx(font, "- 無資料", (Vector2){ 120, 160 }, 24, 1, GRAY);
+            break;
+    }
+
+    Rectangle back_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
+    bool hover = CheckCollisionPointRec(GetMousePosition(), back_btn);
+    DrawRectangleRec(back_btn, hover ? ORANGE : DARKGRAY);
+    DrawTextEx(font, "返回", (Vector2){ back_btn.x + 50, back_btn.y + 15 }, 20, 1, WHITE);
+
+    if (hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        Game* g = (Game*)game;
+        g->current_state = GAME_STATE_HUMAN_TURN;
     }
 }
