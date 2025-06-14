@@ -782,6 +782,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     // (Notice) 新增白雪公主的技能邏輯
     } else if (attacker->character == SNOW_WHITE && skill_card->type == SKILL) {
         if (skill_card->id % 10 == 1) { // 白雪公主攻擊技能
+            // 1. 造成傷害
             int base_damage = skill_card->value;
             int bonus_damage = basic_card->value;
             int total_damage = base_damage + bonus_damage;
@@ -792,7 +793,19 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
                 defender->defense = 0;
                 if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
             }
-            game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
+
+            // (Notice) 2. 讓對手棄置牌庫頂的牌
+            int cards_to_discard = skill_card->level;
+            for (int i = 0; i < cards_to_discard; ++i) {
+                if (defender->deck.SIZE > 0) {
+                    pushbackVector(&defender->graveyard, defender->deck.array[defender->deck.SIZE - 1]);
+                    popbackVector(&defender->deck);
+                } else {
+                    break; // 如果對手牌庫空了就停止
+                }
+            }
+
+            game->message = TextFormat("Dealt %d damage, opponent discards %d!", total_damage, cards_to_discard);
         }else if (skill_card->id % 10 == 2) { // (Notice) 白雪公主防禦技能
             int damage = skill_card->level; // 傷害等於技能等級
             
