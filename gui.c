@@ -19,6 +19,7 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
 void DrawSkillPairingOverlay(const Game* game);
 void apply_buy_card(Game* game, int card_id);
 void DrawPassiveInfoOverlay(const Game* game);
+void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool isSelected);
 
 // =================================================================
 //                               繪製函式
@@ -95,15 +96,16 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
     DrawTextEx(font, TextFormat("Defense: %d", p->defense), (Vector2){ (float)x_pos + 110, (float)y_pos + 45 }, 20, 1, GRAY);
     DrawTextEx(font, TextFormat("Energy: %d", p->energy), (Vector2){ (float)x_pos + 210, (float)y_pos + 45 }, 20, 1, SKYBLUE);
 
-        // 被動技能按鈕（僅在玩家一側顯示）
+// 被動技能按鈕（僅在玩家一側顯示）
     if (is_human) {
         Rectangle passive_btn = { x_pos + 160, y_pos - 50, 40, 40 };
         bool hover = CheckCollisionPointRec(GetMousePosition(), passive_btn);
-        DrawRectangleRec(passive_btn, hover ? SKYBLUE : BLUE);
-        DrawRectangleLinesEx(passive_btn, 2, WHITE);
-        DrawTextEx(font, "P", (Vector2){ passive_btn.x + 12, passive_btn.y + 8 }, 20, 2, WHITE);
+        bool click = hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
-        if (hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        // 改成使用你自定義的函式
+        DrawPassiveButton(passive_btn, "P", hover, game->current_state == GAME_STATE_PASSIVE_INFO);
+
+        if (click) {
             ((Game*)game)->current_state = GAME_STATE_PASSIVE_INFO;
         }
     }
@@ -1328,3 +1330,26 @@ void DrawPassiveInfoOverlay(const Game* game) {
         g->current_state = GAME_STATE_HUMAN_TURN;
     }
 }
+
+void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool isSelected) {
+    // ✅ 使用 DARKBLUE 作為基底顏色
+    Color borderColor = isSelected ? ORANGE : (isHovered ? WHITE : WHITE);
+    Color fillColor   = isSelected ? Fade(ORANGE, 0.4f) :
+                       (isHovered ? Fade(SKYBLUE, 0.4f) : BLUE);  // ← 改這裡
+    Color textColor   = isSelected ? ORANGE : (isHovered ? WHITE : WHITE);
+
+    // ✅ 畫底色 + 邊框
+    DrawRectangleRounded(bounds, 0.3f, 6, fillColor);
+    DrawRectangleRoundedLines(bounds, 0.3f, 6, borderColor);
+
+    // ✅ 文字置中
+    Vector2 textSize = MeasureTextEx(font, text, 20, 1);
+    DrawTextEx(font, text,
+        (Vector2){
+            bounds.x + (bounds.width  - textSize.x) / 2,
+            bounds.y + (bounds.height - textSize.y) / 2
+        },
+        20, 1, textColor);
+}
+
+
