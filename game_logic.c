@@ -23,6 +23,29 @@ void apply_knockback(Game* game, int direction);
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
+
+    for (uint32_t i = 0; i < p->hand.SIZE; i++) {
+        int32_t card_id = p->hand.array[i];
+        const Card* card = get_card_info(card_id);
+
+        // 檢查是否為中毒牌
+        if (card && card->type == STATUS) {
+            int damage = 0;
+            if (card->id == 912) damage = 1;      // LV2 中毒造成 1 點傷害
+            else if (card->id == 913) damage = 2; // LV3 中毒造成 2 點傷害
+            
+            if (damage > 0) {
+                if (p->life <= damage) {
+                    p->life = 0;
+                } else {
+                    p->life -= damage;
+                }
+            }
+        }
+
+        pushbackVector(&p->graveyard, card_id);
+    }
+    clearVector(&p->hand);
     
     // 1. 當前回合玩家棄置所有手牌
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
