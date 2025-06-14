@@ -293,32 +293,32 @@ void DrawBattleInterface(const Game* game) {
     }
     
     // 繪製操作按鈕
-// === End Turn 按鈕 ===
-Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
-bool et_hover = false;
-if (game->current_state == GAME_STATE_HUMAN_TURN) {
-    et_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
-}
-DrawRectangleRec(end_turn_btn, et_hover ? LIME : GREEN);
-DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 15 }, 20, 1, BLACK);
+    // === End Turn 按鈕 ===
+    Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
+    bool et_hover = false;
+    if (game->current_state == GAME_STATE_HUMAN_TURN) {
+        et_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
+    }
+    DrawRectangleRec(end_turn_btn, et_hover ? LIME : GREEN);
+    DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 15 }, 20, 1, BLACK);
 
-// === Focus 按鈕 ===
-Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
-bool focus_hover = false;
-if (game->current_state == GAME_STATE_HUMAN_TURN && !game->player_has_acted) {
-    focus_hover = CheckCollisionPointRec(GetMousePosition(), focus_btn);
-}
-DrawRectangleRec(focus_btn, game->player_has_acted ? GRAY : (focus_hover ? YELLOW : GOLD));
-DrawTextEx(font, "Focus", (Vector2){ focus_btn.x + 60, focus_btn.y + 15 }, 20, 1, BLACK);
+    // === Focus 按鈕 ===
+    Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
+    bool focus_hover = false;
+    if (game->current_state == GAME_STATE_HUMAN_TURN && !game->player_has_acted) {
+        focus_hover = CheckCollisionPointRec(GetMousePosition(), focus_btn);
+    }
+    DrawRectangleRec(focus_btn, game->player_has_acted ? GRAY : (focus_hover ? YELLOW : GOLD));
+    DrawTextEx(font, "Focus", (Vector2){ focus_btn.x + 60, focus_btn.y + 15 }, 20, 1, BLACK);
 
-// === Shop 按鈕 ===
-Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
-bool shop_hover = false;
-if (game->current_state == GAME_STATE_HUMAN_TURN) {
-    shop_hover = CheckCollisionPointRec(GetMousePosition(), shop_btn);
-}
-DrawRectangleRec(shop_btn, shop_hover ? SKYBLUE : BLUE);
-DrawTextEx(font, "Shop", (Vector2){ shop_btn.x + 65, shop_btn.y + 15 }, 20, 1, WHITE);
+    // === Shop 按鈕 ===
+    Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
+    bool shop_hover = false;
+    if (game->current_state == GAME_STATE_HUMAN_TURN) {
+        shop_hover = CheckCollisionPointRec(GetMousePosition(), shop_btn);
+    }
+    DrawRectangleRec(shop_btn, shop_hover ? SKYBLUE : BLUE);
+    DrawTextEx(font, "Shop", (Vector2){ shop_btn.x + 65, shop_btn.y + 15 }, 20, 1, WHITE);
 
 
     // 繪製回合提示
@@ -496,85 +496,81 @@ void DrawShop(const Game* game) {
         float offsetY = 100;  // 往下移動 100px
         int chara = game->inner_game.players[0].character;
 
-        if (chara == 0) {
+        if (chara >= 0 && chara < 10) {
             DrawTextEx(font, "攻擊技能", (Vector2){ 100 + offsetX, 110 + offsetY }, 22, 1, RED);
             DrawTextEx(font, "防禦技能", (Vector2){ 400 + offsetX, 110 + offsetY }, 22, 1, DARKGREEN);
             DrawTextEx(font, "移動技能", (Vector2){ 700 + offsetX, 110 + offsetY }, 22, 1, PURPLE);
 
             for (int type = 0; type < 3; ++type) {
-                const vector* pile = &game->shop_skill_piles[0][type];
-
+                const vector* pile = &game->shop_skill_piles[chara][type];
                 int lv3_count = 0, lv2_count = 0;
-                
-                // LV3 卡
-                int lv3_index = -1;
+                int lv3_index = -1, lv2_index = -1;
                 bool lv2_empty = true;
 
-                // 先找最上層的 LV3 卡牌（從後往前找）
+                // 找出 LV3 卡最上層
                 for (int i = pile->SIZE - 1; i >= 0; --i) {
-                    if (pile->array[i] >= 700 && pile->array[i] < 800 && lv3_index == -1) {
-                        lv3_index = i;
-                    }
-                    if (pile->array[i] >= 600 && pile->array[i] < 700) {
-                        lv2_empty = false; // 只要還有 LV2 就設為 false
-                    }
+                    int id = pile->array[i];
+                    if (id >= 700 && id < 800 && lv3_index == -1) lv3_index = i;
+                    if (id >= 600 && id < 700) lv2_empty = false;
                 }
 
+                // 顯示 LV3 卡
                 for (uint32_t i = 0; i < pile->SIZE; ++i) {
                     int card_id = pile->array[i];
                     if (card_id >= 700 && card_id < 800) {
-                        Rectangle card_rect = {
+                        Rectangle rect = {
                             80 + offsetX + type * 300,
                             150 + offsetY + lv3_count * 40,
                             CARD_WIDTH, CARD_HEIGHT
                         };
 
                         const Card* card = get_card_by_id(card_id);
-
                         bool is_top = ((int)i == lv3_index);
                         bool can_hover = is_top && lv2_empty;
-                        bool hovered = can_hover && CheckCollisionPointRec(GetMousePosition(), card_rect);
+                        bool hovered = can_hover && CheckCollisionPointRec(GetMousePosition(), rect);
 
                         if (hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                             apply_buy_card((Game*)game, card_id);
                         }
 
-                        DrawCard(card, card_rect, hovered, false);
+                        DrawCard(card, rect, hovered, false);
                         lv3_count++;
                     }
                 }
 
-                // LV2 卡
-                int lv2_index = -1;
+                // 找出 LV2 最上層
                 for (int i = pile->SIZE - 1; i >= 0; --i) {
-                    if (pile->array[i] >= 600 && pile->array[i] < 700) {
+                    int id = pile->array[i];
+                    if (id >= 600 && id < 700) {
                         lv2_index = i;
                         break;
                     }
                 }
 
+                // 顯示 LV2 卡
                 for (uint32_t i = 0; i < pile->SIZE; ++i) {
                     int card_id = pile->array[i];
                     if (card_id >= 600 && card_id < 700) {
-                        Rectangle card_rect = {
+                        Rectangle rect = {
                             80 + offsetX + type * 300,
                             150 + offsetY + (lv3_count + lv2_count) * 40,
                             CARD_WIDTH, CARD_HEIGHT
                         };
 
                         const Card* card = get_card_by_id(card_id);
-
                         bool is_top = ((int)i == lv2_index);
-                        bool hovered = is_top && CheckCollisionPointRec(GetMousePosition(), card_rect);
+                        bool hovered = is_top && CheckCollisionPointRec(GetMousePosition(), rect);
+
                         if (hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                             apply_buy_card((Game*)game, card_id);
                         }
 
-                        DrawCard(card, card_rect, hovered, false);
+                        DrawCard(card, rect, hovered, false);
                         lv2_count++;
                     }
                 }
-                // ➕ 顯示當前 cost
+
+                // ➕ 顯示 cost
                 int cost = (lv2_count > 0) ? 2 : 4;
                 char cost_text[32];
                 sprintf(cost_text, "Cost: %d", cost);
@@ -585,9 +581,7 @@ void DrawShop(const Game* game) {
                 DrawTextEx(font, cost_text, cost_pos, 20, 1, ORANGE);
             }
         } else {
-
             DrawTextEx(font, "技能商店尚未開放", (Vector2){ 330 + offsetX, 300 + offsetY }, 28, 1, RED);
-        
         }
     }
 
@@ -693,6 +687,7 @@ void DrawPassiveInfoOverlay(const Game* game) {
     int line_gap = 28;     // 每行高度
     switch (chara) {
         case 0: // 小紅帽
+            DrawTextEx(font, "- 暴打別人一頓", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
             // 🟦 攻擊被動
             DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
 
@@ -753,14 +748,14 @@ void DrawPassiveInfoOverlay(const Game* game) {
             }
             break;
         case 1: // 白雪公主
-            DrawTextEx(font, "- 中毒標記會持續傷害敵人", (Vector2){ 120, 160 }, 24, 1, GREEN);
+            DrawTextEx(font, "- 中毒標記會持續傷害敵人", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
             break;
         case 2: // 睡美人
-            DrawTextEx(font, "- 可累積覺醒點數並進行爆發", (Vector2){ 120, 160 }, 24, 1, SKYBLUE);
+            DrawTextEx(font, "- 可累積覺醒點數並進行爆發", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
             break;
         // 其他角色依需求增加
         default:
-            DrawTextEx(font, "- 無資料", (Vector2){ 120, 160 }, 24, 1, GRAY);
+            DrawTextEx(font, "- 無資料", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
             break;
     }
 

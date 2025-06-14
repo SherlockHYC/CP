@@ -17,6 +17,7 @@ void apply_buy_card(Game* game, int card_id);
 void apply_focus_remove(Game* game, int choice);
 void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx);
 void apply_knockback(Game* game, int direction);
+void initialize_shop_skill_piles(Game* game);
 
 
 
@@ -56,6 +57,12 @@ void end_turn(Game* game) {
 
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
+
+        case GAME_STATE_PASSIVE_INFO:
+            break;
+        case GAME_STATE_BATTLE:
+            break;
+
         case GAME_STATE_CHOOSE_CHAR: {
             for(int i = 0; i < 10; i++) {
                 int row = i / 5;
@@ -69,7 +76,8 @@ void UpdateGame(Game* game, bool* should_close) {
                 if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     init_player_deck(&game->inner_game.players[0], (CharacterType)i);
                     init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
-                    
+                    initialize_shop_skill_piles(game);
+
                     game->inner_game.players[0].locate[0] = 6;
                     game->inner_game.players[1].locate[0] = 4;
 
@@ -353,6 +361,8 @@ void UpdateGame(Game* game, bool* should_close) {
         if (game->inner_game.players[0].life <= 0) { game->message = "You Lose!"; game->current_state = GAME_STATE_GAME_OVER; }
         if (game->inner_game.players[1].life <= 0) { game->message = "You Win!"; game->current_state = GAME_STATE_GAME_OVER; }
     }
+    
+
 }
 
 // init_player_deck 函式 - 保持不變
@@ -788,4 +798,24 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     game->player_has_acted = true;
     game->pending_skill_card_index = -1;
     game->current_state = GAME_STATE_HUMAN_TURN;
+}
+
+void initialize_shop_skill_piles(Game* game) {
+    for (int chara = 0; chara < 10; ++chara) {
+        for (int type = 0; type < 3; ++type) {
+            vector* pile = &game->shop_skill_piles[chara][type];
+            clearVector(pile);  // 確保是空的
+
+            int lv2 = 600 + chara * 10 + (type + 1);
+            int lv3 = 700 + chara * 10 + (type + 1);
+
+            // 加入 LV2 ×2
+            pushbackVector(pile, lv2);
+            pushbackVector(pile, lv2);
+            // 加入 LV3 ×3
+            pushbackVector(pile, lv3);
+            pushbackVector(pile, lv3);
+            pushbackVector(pile, lv3);
+        }
+    }
 }
