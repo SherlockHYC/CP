@@ -167,6 +167,9 @@ void DrawGameBoard(const Game* game) {
     float screenWidth = GetScreenWidth();
     float screenHeight = GetScreenHeight();
 
+    const player* human = &game->inner_game.players[0];
+    const player* bot = &game->inner_game.players[1];
+
     const int gameplay_slots = 11;
     const float slot_w = 80.0f;
     const float slot_h = 110.0f;
@@ -178,6 +181,7 @@ void DrawGameBoard(const Game* game) {
     float board_offset_y = 40.0f;
     float mid_y = screen_center_y - (slot_h / 2.0f) + board_offset_y;
 
+    // (Notice) 繪製遊戲板上的圓形位置和卡牌插槽
     const float circle_radius = 35.0f;
     const float vertical_gap = 95.0f;
     float top_row_y = screen_center_y - vertical_gap + board_offset_y;
@@ -215,17 +219,43 @@ void DrawGameBoard(const Game* game) {
         DrawRectangleRoundedLinesEx(card_slot, 0.1f, 10, 2, LIME);
     }
     
+    // (Notice) 牌堆繪製邏輯
     Rectangle deck_rect = { start_x - slot_w - spacing * 3, mid_y, slot_w, slot_h };
     DrawRectangleRounded(deck_rect, 0.1f, 10, Fade(DARKBLUE, 0.8f));
     DrawRectangleRoundedLinesEx(deck_rect, 0.1f, 10, 2, SKYBLUE);
     DrawTextEx(font, "Deck", (Vector2){deck_rect.x + 20, deck_rect.y - 25}, 20, 1, WHITE);
-    DrawTextEx(font, TextFormat("%d", game->inner_game.players[0].deck.SIZE), (Vector2){deck_rect.x + 30, deck_rect.y + 40}, 24, 1, WHITE);
+    
+    // 繪製分隔線
+    DrawLine(deck_rect.x, deck_rect.y + deck_rect.height/2, deck_rect.x + deck_rect.width, deck_rect.y + deck_rect.height/2, LIGHTGRAY);
+    
+    // 繪製對手牌數 (上方)
+    const char* bot_deck_text = TextFormat("%d", bot->deck.SIZE);
+    Vector2 bot_deck_text_size = MeasureTextEx(font, bot_deck_text, 24, 1);
+    DrawTextEx(font, bot_deck_text, (Vector2){deck_rect.x + (deck_rect.width - bot_deck_text_size.x)/2, deck_rect.y + deck_rect.height*0.25f - bot_deck_text_size.y/2}, 24, 1, ORANGE);
+
+    // 繪製我方牌數 (下方)
+    const char* human_deck_text = TextFormat("%d", human->deck.SIZE);
+    Vector2 human_deck_text_size = MeasureTextEx(font, human_deck_text, 24, 1);
+    DrawTextEx(font, human_deck_text, (Vector2){deck_rect.x + (deck_rect.width - human_deck_text_size.x)/2, deck_rect.y + deck_rect.height*0.75f - human_deck_text_size.y/2}, 24, 1, WHITE);
+
 
     Rectangle discard_rect = { start_x + gameplay_area_w + spacing * 3, mid_y, slot_w, slot_h };
     DrawRectangleRounded(discard_rect, 0.1f, 10, Fade(MAROON, 0.8f));
     DrawRectangleRoundedLinesEx(discard_rect, 0.1f, 10, 2, RED);
     DrawTextEx(font, "Discard", (Vector2){discard_rect.x + 5, discard_rect.y - 25}, 20, 1, WHITE);
-    DrawTextEx(font, TextFormat("%d", game->inner_game.players[0].graveyard.SIZE), (Vector2){discard_rect.x + 30, discard_rect.y + 40}, 24, 1, WHITE);
+    
+    // 繪製分隔線
+    DrawLine(discard_rect.x, discard_rect.y + discard_rect.height/2, discard_rect.x + discard_rect.width, discard_rect.y + discard_rect.height/2, LIGHTGRAY);
+
+    // 繪製對手棄牌數 (上方)
+    const char* bot_discard_text = TextFormat("%d", bot->graveyard.SIZE);
+    Vector2 bot_discard_text_size = MeasureTextEx(font, bot_discard_text, 24, 1);
+    DrawTextEx(font, bot_discard_text, (Vector2){discard_rect.x + (discard_rect.width - bot_discard_text_size.x)/2, discard_rect.y + discard_rect.height*0.25f - bot_discard_text_size.y/2}, 24, 1, ORANGE);
+
+    // 繪製我方棄牌數 (下方)
+    const char* human_discard_text = TextFormat("%d", human->graveyard.SIZE);
+    Vector2 human_discard_text_size = MeasureTextEx(font, human_discard_text, 24, 1);
+    DrawTextEx(font, human_discard_text, (Vector2){discard_rect.x + (discard_rect.width - human_discard_text_size.x)/2, discard_rect.y + discard_rect.height*0.75f - human_discard_text_size.y/2}, 24, 1, WHITE);
 }
 
 void DrawBattleInterface(const Game* game) {
