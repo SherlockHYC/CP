@@ -378,6 +378,9 @@ void init_player_deck(player* p, CharacterType character) {
     p->life = 20; 
     p->defense = 0; 
     p->energy = 0;
+
+    p->snowWhite.remindPosion = initVector();
+
     
     // Add basic cards
     for(int k=0; k<3; ++k) pushbackVector(&p->deck, 101); // Attack LV1
@@ -395,6 +398,16 @@ void init_player_deck(player* p, CharacterType character) {
             pushbackVector(&p->deck, 511);
             pushbackVector(&p->deck, 512);
             pushbackVector(&p->deck, 513);
+
+            for (int i = 0; i < 6; ++i) {
+                pushbackVector(&p->snowWhite.remindPosion, 913); // Poison LV3
+            }
+            for (int i = 0; i < 6; ++i) {
+                pushbackVector(&p->snowWhite.remindPosion, 912); // Poison LV2
+            }
+            for (int i = 0; i < 6; ++i) {
+                pushbackVector(&p->snowWhite.remindPosion, 911); // Poison LV1
+            }
             break;
         case SLEEPING_BEAUTY:
             pushbackVector(&p->deck, 521);
@@ -814,6 +827,19 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
                 int dmg_left = damage - defender->defense;
                 defender->defense = 0;
                 if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
+            }
+
+            int cards_to_move = basic_card->value;
+            int cards_moved = 0;
+            for (int i = 0; i < cards_to_move; ++i) {
+                if (attacker->snowWhite.remindPosion.SIZE > 0) {
+                    int poison_card_id = attacker->snowWhite.remindPosion.array[attacker->snowWhite.remindPosion.SIZE - 1];
+                    pushbackVector(&attacker->graveyard, poison_card_id);
+                    popbackVector(&attacker->snowWhite.remindPosion);
+                    cards_moved++;
+                } else {
+                    break; // 毒藥牌庫已空
+                }
             }
             game->message = TextFormat("Used %s, dealing %d damage!", skill_card->name, damage);
         }else if (skill_card->id % 10 == 3) { // (Notice) 白雪公主移動技能

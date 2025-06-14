@@ -256,6 +256,28 @@ void DrawGameBoard(const Game* game) {
     const char* human_discard_text = TextFormat("%d", human->graveyard.SIZE);
     Vector2 human_discard_text_size = MeasureTextEx(font, human_discard_text, 24, 1);
     DrawTextEx(font, human_discard_text, (Vector2){discard_rect.x + (discard_rect.width - human_discard_text_size.x)/2, discard_rect.y + discard_rect.height*0.75f - human_discard_text_size.y/2}, 24, 1, WHITE);
+
+    if (human->character == SNOW_WHITE) {
+        float poison_pile_h = slot_h / 2;
+        Rectangle poison_deck_rect = { deck_rect.x, deck_rect.y + deck_rect.height + 20, slot_w, poison_pile_h };
+        DrawRectangleRounded(poison_deck_rect, 0.1f, 10, Fade(DARKGREEN, 0.8f));
+        DrawRectangleRoundedLinesEx(poison_deck_rect, 0.1f, 10, 2, LIME);
+        DrawTextEx(font, "Poison", (Vector2){poison_deck_rect.x + 15, poison_deck_rect.y - 25}, 20, 1, WHITE);
+
+        if (human->snowWhite.remindPosion.SIZE > 0) {
+            int top_poison_id = human->snowWhite.remindPosion.array[human->snowWhite.remindPosion.SIZE - 1];
+            const Card* top_poison_card = get_card_info(top_poison_id);
+            if (top_poison_card) {
+                const char* poison_level_text = TextFormat("LV: %d", top_poison_card->level);
+                Vector2 text_size = MeasureTextEx(font, poison_level_text, 24, 1);
+                DrawTextEx(font, poison_level_text, (Vector2){poison_deck_rect.x + (poison_deck_rect.width - text_size.x)/2, poison_deck_rect.y + (poison_deck_rect.height - text_size.y)/2}, 24, 1, WHITE);
+            }
+        } else {
+            const char* empty_text = "Empty";
+            Vector2 text_size = MeasureTextEx(font, empty_text, 24, 1);
+            DrawTextEx(font, empty_text, (Vector2){poison_deck_rect.x + (poison_deck_rect.width - text_size.x)/2, poison_deck_rect.y + (poison_deck_rect.height - text_size.y)/2}, 24, 1, GRAY);
+        }
+    }
 }
 
 void DrawBattleInterface(const Game* game) {

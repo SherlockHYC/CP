@@ -82,6 +82,10 @@ const Card card_database[] = {
     
     // Status Cards
     DEF_CARD(901, "[Status] Poisoned", STATUS, 0, 0, 0),
+
+    DEF_CARD(911, "[Status] Poison LV1", STATUS, 1, 0, 0),
+    DEF_CARD(912, "[Status] Poison LV2", STATUS, 2, 0, 0),
+    DEF_CARD(913, "[Status] Poison LV3", STATUS, 3, 0, 0),
 };
 const int NUM_CARD_DEFINITIONS = sizeof(card_database) / sizeof(Card);
 
