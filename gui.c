@@ -652,9 +652,105 @@ void DrawPassiveInfoOverlay(const Game* game) {
     const player* p = &game->inner_game.players[0];
     int chara = p->character;
 
+    const vector* atk_pile = &game->shop_skill_piles[0][0];
+    const vector* def_pile = &game->shop_skill_piles[0][1];
+    const vector* mov_pile = &game->shop_skill_piles[0][2];
+
+    int atk_lv2 = 0, atk_lv3 = 0;
+    int def_lv2 = 0, def_lv3 = 0;
+    int mov_lv2 = 0, mov_lv3 = 0;
+
+    for (uint32_t i = 0; i < atk_pile->SIZE; ++i) {
+        int id = atk_pile->array[i];
+        if (id >= 600 && id < 700) atk_lv2++;
+        if (id >= 700 && id < 800) atk_lv3++;
+    }
+    for (uint32_t i = 0; i < def_pile->SIZE; ++i) {
+        int id = def_pile->array[i];
+        if (id >= 600 && id < 700) def_lv2++;
+        if (id >= 700 && id < 800) def_lv3++;
+    }
+    for (uint32_t i = 0; i < mov_pile->SIZE; ++i) {
+        int id = mov_pile->array[i];
+        if (id >= 600 && id < 700) mov_lv2++;
+        if (id >= 700 && id < 800) mov_lv3++;
+    }
+
+    int atk_bought_lv2 = 2 - atk_lv2;    
+    int def_bought_lv2 = 2 - def_lv2;
+    int mov_bought_lv2 = 2 - mov_lv2;
+    
+
+    // 是否解鎖
+    bool unlock_burn = atk_bought_lv2 >= 2;
+    bool unlock_atk_cache = atk_lv3 == 0;
+    bool unlock_hood = def_bought_lv2 >= 2;
+    bool unlock_def_cache = def_lv3 == 0;
+    bool unlock_sensor = mov_bought_lv2 >= 2;
+    bool unlock_mov_cache = mov_lv3 == 0;
+
+    int x = 150, y = 180;  // 左上角開始座標
+    int line_gap = 28;     // 每行高度
     switch (chara) {
         case 0: // 小紅帽
-            DrawTextEx(font, "- 可儲存3張攻擊牌並強化輸出", (Vector2){ 120, 160 }, 24, 1, LIME);
+            // 🟦 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_burn ? "過載燃燒: 使用移動或攻擊技能時，可捨棄最多1張技能牌，攻擊+x(x為捨棄的技能牌等級)"
+                            : "過載燃燒(未解鎖): 使用移動或攻擊技能時，可捨棄最多1張技能牌，攻擊+x(x為捨棄的技能牌等級)",
+                (Vector2){x, y}, 20, 1, unlock_burn ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_burn) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? TextFormat("板載緩存A: 把最多一張牌留到下個回合")
+                                : "板載緩存A(未解鎖): 把最多一張牌留到下個回合",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_hood ? "兜帽系統: 當對手對我造成傷害時，可捨棄最多1張技能牌，傷害抵免x(x為捨棄的技能牌等級)"
+                            : "兜帽系統(未解鎖): 當對手對我造成傷害時，可捨棄最多1張技能牌，傷害抵免x(x為捨棄的技能牌等級)",
+                (Vector2){x, y}, 20, 1, unlock_hood ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_hood) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "板載緩存B: 把最多一張牌留到下個回合"
+                                : "板載緩存B(未解鎖): 把最多一張牌留到下個回合",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_sensor ? "變異感應: 使用移動或攻擊技能時，可捨棄最多1張技能牌，射程+x(x為捨棄的技能牌等級)"
+                            : "變異感應(未解鎖): 使用移動或攻擊技能時，可捨棄最多1張技能牌，射程+x(x為捨棄的技能牌等級)",
+                (Vector2){x, y}, 20, 1, unlock_sensor ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_sensor) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "板載緩存C: 把最多一張牌留到下個回合"
+                                : "板載緩存C(未解鎖): 把最多一張牌留到下個回合",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
             break;
         case 1: // 白雪公主
             DrawTextEx(font, "- 中毒標記會持續傷害敵人", (Vector2){ 120, 160 }, 24, 1, GREEN);
