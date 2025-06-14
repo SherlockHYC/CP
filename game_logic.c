@@ -718,7 +718,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
 
     if (attacker->character == RED_HOOD && skill_card->type == SKILL) {
         if (skill_card->id % 10 == 1) { // 紅帽攻擊技能
-            int base_damage = skill_card->level;
+            int base_damage = skill_card->value;
             int bonus_damage = basic_card->value;
             int total_damage = base_damage + bonus_damage;
             
@@ -732,12 +732,21 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
         
         } else if (skill_card->id % 10 == 2) { // 紅帽防禦技能
             int defense_gain = basic_card->value;
+            int total_damage = skill_card->value;
             attacker->defense += defense_gain;
             game->pending_retaliation_level[player_id] = skill_card->level;
             game->message = TextFormat("Gained %d defense! Retaliation set!", defense_gain);
 
+            if(defender->defense >= total_damage) defender->defense -= total_damage;
+            else { 
+                int dmg_left = total_damage - defender->defense;
+                defender->defense = 0;
+                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
+            }
+            game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
+
         } else if (skill_card->id % 10 == 3) { // 紅帽移動技能
-            int damage = skill_card->level;
+            int damage = skill_card->value;
             if(defender->defense >= damage) defender->defense -= damage;
             else {
                 int dmg_left = damage - defender->defense;
@@ -759,7 +768,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     // (Notice) 新增白雪公主的技能邏輯
     } else if (attacker->character == SNOW_WHITE && skill_card->type == SKILL) {
         if (skill_card->id % 10 == 1) { // 白雪公主攻擊技能
-            int base_damage = skill_card->level;
+            int base_damage = skill_card->value;
             int bonus_damage = basic_card->value;
             int total_damage = base_damage + bonus_damage;
             

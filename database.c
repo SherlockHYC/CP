@@ -30,15 +30,15 @@ const Card card_database[] = {
     //後面三個數字分別是射程 傷害 花費
     // --- Character Skill Cards ---
     // [Red Hood]
-    DEF_CARD(501, "[RH] Wolf Claw",      SKILL, 1, 2, 1), // ATK
+    DEF_CARD(501, "[RH] Wolf Claw",      SKILL, 1, 1, 1), // ATK
     DEF_CARD(601, "[RH] 精準射擊",        SKILL, 2, 2, 2), // 射程2 傷害2+O
     DEF_CARD(701, "[RH] 致命狙擊",        SKILL, 3, 3, 4), // 射程3 傷害3+0
     
-    DEF_CARD(502, "[RH] Dodge",          SKILL, 1, 0, 1), // DEF
+    DEF_CARD(502, "[RH] Dodge",          SKILL, 1, 1, 1), // DEF
     DEF_CARD(602, "[RH] 電流護盾",        SKILL, 2, 2, 2), // 射程2 傷害2
     DEF_CARD(702, "[RH] 終極護盾",        SKILL, 3, 3, 4), // 射程3 傷害3
     
-    DEF_CARD(503, "[RH] Quick Step",     SKILL, 1, 0, 1), // MOV
+    DEF_CARD(503, "[RH] Quick Step",     SKILL, 1, 1, 1), // MOV
     DEF_CARD(603, "[RH] 火力噴射",        SKILL, 2, 2, 2), // 射程2 傷害2 擊退
     DEF_CARD(703, "[RH] 暴怒噴射",        SKILL, 3, 3, 4), // 射程3 傷害3 擊退
 
