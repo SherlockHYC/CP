@@ -646,9 +646,9 @@ void DrawPassiveInfoOverlay(const Game* game) {
     const player* p = &game->inner_game.players[0];
     int chara = p->character;
 
-    const vector* atk_pile = &game->shop_skill_piles[0][0];
-    const vector* def_pile = &game->shop_skill_piles[0][1];
-    const vector* mov_pile = &game->shop_skill_piles[0][2];
+    const vector* atk_pile = &game->shop_skill_piles[chara][0];
+    const vector* def_pile = &game->shop_skill_piles[chara][1];
+    const vector* mov_pile = &game->shop_skill_piles[chara][2];
 
     int atk_lv2 = 0, atk_lv3 = 0;
     int def_lv2 = 0, def_lv3 = 0;
@@ -676,15 +676,16 @@ void DrawPassiveInfoOverlay(const Game* game) {
     
 
     // 是否解鎖
-    bool unlock_burn = atk_bought_lv2 >= 2;
+    bool unlock_atk_lv2 = atk_bought_lv2 >= 2;
     bool unlock_atk_cache = atk_lv3 == 0;
-    bool unlock_hood = def_bought_lv2 >= 2;
+    bool unlock_def_lv2 = def_bought_lv2 >= 2;
     bool unlock_def_cache = def_lv3 == 0;
-    bool unlock_sensor = mov_bought_lv2 >= 2;
+    bool unlock_mov_lv2 = mov_bought_lv2 >= 2;
     bool unlock_mov_cache = mov_lv3 == 0;
 
     int x = 150, y = 180;  // 左上角開始座標
     int line_gap = 28;     // 每行高度
+    
     switch (chara) {
         case 0: // 小紅帽
             DrawTextEx(font, "- 暴打別人一頓", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
@@ -692,10 +693,10 @@ void DrawPassiveInfoOverlay(const Game* game) {
             DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
 
             DrawTextEx(font,
-                unlock_burn ? "過載燃燒: 使用移動或攻擊技能時，可捨棄最多1張技能牌，攻擊+x(x為捨棄的技能牌等級)"
+                unlock_atk_lv2 ? "過載燃燒: 使用移動或攻擊技能時，可捨棄最多1張技能牌，攻擊+x(x為捨棄的技能牌等級)"
                             : "過載燃燒(未解鎖): 使用移動或攻擊技能時，可捨棄最多1張技能牌，攻擊+x(x為捨棄的技能牌等級)",
-                (Vector2){x, y}, 20, 1, unlock_burn ? YELLOW : GRAY); y += line_gap;
-            if (!unlock_burn) {
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
                 DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
             }
 
@@ -712,10 +713,10 @@ void DrawPassiveInfoOverlay(const Game* game) {
             DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
 
             DrawTextEx(font,
-                unlock_hood ? "兜帽系統: 當對手對我造成傷害時，可捨棄最多1張技能牌，傷害抵免x(x為捨棄的技能牌等級)"
+                unlock_def_lv2 ? "兜帽系統: 當對手對我造成傷害時，可捨棄最多1張技能牌，傷害抵免x(x為捨棄的技能牌等級)"
                             : "兜帽系統(未解鎖): 當對手對我造成傷害時，可捨棄最多1張技能牌，傷害抵免x(x為捨棄的技能牌等級)",
-                (Vector2){x, y}, 20, 1, unlock_hood ? YELLOW : GRAY); y += line_gap;
-            if (!unlock_hood) {
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
                 DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
             }
 
@@ -732,10 +733,10 @@ void DrawPassiveInfoOverlay(const Game* game) {
             DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
 
             DrawTextEx(font,
-                unlock_sensor ? "變異感應: 使用移動或攻擊技能時，可捨棄最多1張技能牌，射程+x(x為捨棄的技能牌等級)"
+                unlock_mov_lv2 ? "變異感應: 使用移動或攻擊技能時，可捨棄最多1張技能牌，射程+x(x為捨棄的技能牌等級)"
                             : "變異感應(未解鎖): 使用移動或攻擊技能時，可捨棄最多1張技能牌，射程+x(x為捨棄的技能牌等級)",
-                (Vector2){x, y}, 20, 1, unlock_sensor ? YELLOW : GRAY); y += line_gap;
-            if (!unlock_sensor) {
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
                 DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
             }
 
@@ -747,12 +748,570 @@ void DrawPassiveInfoOverlay(const Game* game) {
                 DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
             }
             break;
+
+
         case 1: // 白雪公主
             DrawTextEx(font, "- 中毒標記會持續傷害敵人", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "水晶之棺: 對對手造成2點以上傷害時，將1張中毒牌放入其棄牌堆"
+                            : "水晶之棺(未解鎖): 對對手造成2點以上傷害時，將1張中毒牌放入其棄牌堆",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "至純之毒A: 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命"
+                                : "至純之毒A(未解鎖): 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "墮落之劫: 使用防禦技能放中毒牌時，可選擇改為洗入對手牌庫"
+                            : "墮落之劫(未解鎖): 使用防禦技能放中毒牌時，可選擇改為洗入對手牌庫",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "至純之毒B: 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命"
+                                : "至純之毒B(未解鎖): 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "劇毒之蝕: 移動行動穿過對手時，將1張中毒牌放入其棄牌堆"
+                            : "劇毒之蝕(未解鎖): 移動行動穿過對手時，將1張中毒牌放入其棄牌堆",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "至純之毒C: 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命"
+                                : "至純之毒C(未解鎖): 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
             break;
+
         case 2: // 睡美人
-            DrawTextEx(font, "- 可累積覺醒點數並進行爆發", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+            DrawTextEx(font, "- 流血才能變強", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "放血療法: 每回合限1次，技能或行動需捨基本牌時，可\"失去\"2/4/6生命當作Lv1/2/3"
+                                : "放血療法(未解鎖): 每回合限1次，技能/行動需捨基本牌時，可\"失去\"2/4/6生命當作Lv1/2/3",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "強制治療A: 立即回復5點生命，使用後將此效果移除"
+                                : "強制治療A(未解鎖): 立即回復5點生命，使用後將此效果移除",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "血祭之禮: 每回合限一次，當你造成至少2/4/6點傷害時，可從棄牌堆中挑一張不超過lv1/2/3的攻擊牌加到手牌"
+                                : "血祭之禮(未解鎖): 每回合限一次，當你造成至少2/4/6點傷害時，可以從棄牌堆中挑一張不超過lv1/2/3的攻擊牌加到手牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "強制治療B: 立即回復5點生命，使用後將此效果移除"
+                                : "強制治療B(未解鎖): 立即回復5點生命，使用後將此效果移除",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "精神屏障: 使用移動技能時，獲得等同等級的防禦"
+                                : "精神屏障(未解鎖): 使用移動技能時，獲得等同等級的防禦",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "強制治療C: 立即回復5點生命，使用後將此效果移除"
+                                : "強制治療C(未解鎖): 立即回復5點生命，使用後將此效果移除",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
             break;
+        
+        case 3: // 愛麗絲
+            DrawTextEx(font, "- 更換身份觸發不同能力", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "砍掉她的頭: 紅心皇后狀態下，攻擊技能將牌放入棄牌堆時，可改為加入手牌"
+                               : "砍掉她的頭(未解鎖): 紅心皇后狀態下，攻擊技能將牌放入棄牌堆時，可改為加入手牌",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "開始我的表演A: 回合結束抽牌時，額外抽1張(可疊加)"
+                                : "開始我的表演A(未解鎖): 回合結束抽牌時，額外抽1張(可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "仙境降臨: 瘋帽子狀態下，防禦技能將牌放入棄牌堆時，可改為加入手牌"
+                               : "仙境降臨(未解鎖): 瘋帽子狀態下，防禦技能將牌放入棄牌堆時，可改為加入手牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "開始我的表演B: 回合結束抽牌時，額外抽1張(可疊加)"
+                                : "開始我的表演B(未解鎖): 回合結束抽牌時，額外抽1張(可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "我們全是瘋子: 柴郡貓狀態下，穿過對手或被穿過時可抽1張牌"
+                               : "我們全是瘋子(未解鎖): 柴郡貓狀態下，穿過對手或被穿過時可抽1張牌",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "開始我的表演C: 回合結束抽牌時，額外抽1張(可疊加)"
+                                : "開始我的表演C(未解鎖): 回合結束抽牌時，額外抽1張(可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 4: // 花木蘭
+            DrawTextEx(font, "- 累積氣提升爆發力", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "氣貫全身: 使用攻擊技能或行動時，可消耗x點氣使傷害+x (最多3)"
+                               : "氣貫全身(未解鎖): 使用攻擊技能或行動時，可消耗x點氣使傷害+x (最多3)",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "暴風前夕A: 回合開始時，獲得1點氣 (可疊加)"
+                                : "暴風前夕A(未解鎖): 回合開始時，獲得1點氣 (可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "主宰命運: 在你回合結束階段抽取卡牌之後，你可以棄掉1張手牌，之後再抽取1張牌"
+                               : "主宰命運(未解鎖): 在你回合結束階段抽取卡牌之後，你可以棄掉1張手牌，之後再抽取1張牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "暴風前夕B: 回合開始時，獲得1點氣 (可疊加)"
+                                : "暴風前夕B(未解鎖): 回合開始時，獲得1點氣 (可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "長驅直入: 使用移動行動時，可消耗x點氣額外移動x格 (最多3)"
+                               : "長驅直入(未解鎖): 使用移動行動時，可消耗x點氣額外移動x格 (最多3)",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "暴風前夕C: 回合開始時，獲得1點氣 (可疊加)"
+                                : "暴風前夕C(未解鎖): 回合開始時，獲得1點氣 (可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 5: // 輝夜姬
+            DrawTextEx(font, "- 月之力會吞噬一切來犯之敵", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "懲戒時刻: 防禦上限+1，每回合限1次，可將防禦牌當作同等級攻擊牌"
+                               : "懲戒時刻(未解鎖): 防禦上限+1，每回合限1次，可將防禦牌當作同等級攻擊牌",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "月下沉思A: 回合結束時，獲得2點防禦"
+                                : "月下沉思A(未解鎖): 回合結束時，獲得2點防禦",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "血色月光: 防禦上限+1，清理每3點防禦可抽1張牌"
+                               : "血色月光(未解鎖): 防禦上限+1，清理每3點防禦可抽1張牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "月下沉思B: 回合結束時，獲得2點防禦"
+                                : "月下沉思B(未解鎖): 回合結束時，獲得2點防禦",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "靈性本能: 防禦上限+1，每回合限1次，若防禦高於敵可推動他1格"
+                               : "靈性本能(未解鎖): 防禦上限+1，每回合限1次，若防禦高於敵可推動他1格",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "月下沉思C: 回合結束時，獲得2點防禦"
+                                : "月下沉思C(未解鎖): 回合結束時，獲得2點防禦",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 6: // 美人魚
+            DrawTextEx(font, "- 操控觸手進行遠距打擊", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "暴風之蝕: 對手在觸手上時，可無視距離發動攻擊行動(基本牌)"
+                               : "暴風之蝕(未解鎖): 對手在觸手上時，可無視距離發動攻擊行動(基本牌)",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "暗潮湧動A(已生效): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果"
+                                : "暗潮湧動A(未解鎖): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "神秘共鳴: 位於觸手上時，對手對你造成的傷害-1"
+                               : "神秘共鳴(未解鎖): 位於觸手上時，對手對你造成的傷害-1",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "暗潮湧動B(已生效): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果"
+                                : "暗潮湧動B(未解鎖): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "海的女兒: 移動後可將一個觸手向任意位置移動x/2格(向下取整)"
+                               : "海的女兒(未解鎖): 移動後可將一個觸手向任意位置移動x/2格(向下取整)",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "暗潮湧動C(已生效): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果"
+                                : "暗潮湧動C(未解鎖): 獲得一個觸手任意位置，若遠古甦醒生效則放腳下並移除此效果",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 7: // 火柴女孩
+            DrawTextEx(font, "- 操控火柴改變戰局", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "痛苦的儀式: 攻擊技能或行動時，可將對手棄牌1張放回火柴牌庫，傷害+2"
+                               : "痛苦的儀式(未解鎖): 攻擊技能或行動時，可將對手棄牌1張放回火柴牌庫，傷害+2",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "火焰的捉弄: 對手用火柴牌時，你+1能量，火柴牌不能作為攻擊"
+                                : "火焰的捉弄(未解鎖): 對手用火柴牌時，你+1能量，火柴牌不能作為攻擊",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "放縱的渴望: 使用防禦技能時，可回收對手棄牌1張火柴並抽1牌"
+                               : "放縱的渴望(未解鎖): 使用防禦技能時，可回收對手棄牌1張火柴並抽1牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "欲望的捉弄: 對手用火柴牌時，你+1能量，火柴牌不能作為防禦"
+                                : "欲望的捉弄(未解鎖): 對手用火柴牌時，你+1能量，火柴牌不能作為防禦",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "魔鬼的凝視: 承受傷害失血時，可回收對手棄牌1張火柴並移動1格"
+                               : "魔鬼的凝視(未解鎖): 承受傷害失血時，可回收對手棄牌1張火柴並移動1格",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "命運的捉弄: 對手用火柴牌時，你+1能量，火柴牌不能作為移動"
+                                : "命運的捉弄(未解鎖): 對手用火柴牌時，你+1能量，火柴牌不能作為移動",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 8: // 桃樂絲
+            DrawTextEx(font, "- 高速連擊獲得 token", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "殺戮指令: 若連續攻擊傷害遞增，完成連擊並獲得1連擊token"
+                               : "殺戮指令(未解鎖): 若連續攻擊傷害遞增，完成連擊並獲得1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "無所遁形A: 每完成1次連擊，額外+1連擊token"
+                                : "無所遁形A(未解鎖): 每完成1次連擊，額外+1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "超越機器: 若後者技能等級大於前者，完成連擊並獲得1連擊token"
+                               : "超越機器(未解鎖): 若後者技能等級大於前者，完成連擊並獲得1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "無所遁形B: 每完成1次連擊，額外+1連擊token"
+                                : "無所遁形B(未解鎖): 每完成1次連擊，額外+1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "獲准極刑: 使用任一技能後，可棄移動牌使對手被移動x格"
+                               : "獲准極刑(未解鎖): 使用任一技能後，可棄移動牌使對手被移動x格",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "無所遁形C: 每完成1次連擊，額外+1連擊token"
+                                : "無所遁形C(未解鎖): 每完成1次連擊，額外+1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 9: // 山魯佐德
+            DrawTextEx(font, "- 操弄命運與藍色token", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "命運之手: 攻擊造成3點以上傷害時，可將1枚藍色token翻為紅色"
+                               : "命運之手(未解鎖): 攻擊造成3點以上傷害時，可將1枚藍色token翻為紅色",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "童話編織者A: 獲得1枚藍色token並放置至任一對手供應排庫上"
+                                : "童話編織者A(未解鎖): 獲得1枚藍色token並放置至任一對手供應牌庫上",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "改寫欲望: 對手購牌時，該牌庫每有1枚token就失去1點生命"
+                               : "改寫欲望(未解鎖): 對手購牌時，該牌庫每有1枚token就失去1點生命",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "童話編織者B: 獲得1枚藍色token並放置至任一對手供應排庫上"
+                                : "童話編織者B(未解鎖): 獲得1枚藍色token並放置至任一對手供應牌庫上",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "重組思想: 對手抽牌前展示其牌庫頂2張，有命運token則損血並棄該牌"
+                               : "重組思想(未解鎖): 對手抽牌前展示其牌庫頂2張，有命運token則損血並棄該牌",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "童話編織者C: 獲得1枚藍色token並放置至任一對手供應排庫上"
+                                : "童話編織者C(未解鎖): 獲得1枚藍色token並放置至任一對手供應牌庫上",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+
         // 其他角色依需求增加
         default:
             DrawTextEx(font, "- 無資料", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);

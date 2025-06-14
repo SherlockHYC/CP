@@ -533,6 +533,7 @@ void InitGame(Game* game) {
         pushbackVector(&game->shop_skill_piles[RED_HOOD][1], 702);
         pushbackVector(&game->shop_skill_piles[RED_HOOD][2], 703);
     }
+    
 }
 
 // shuffle_deck 函式 - 保持不變
