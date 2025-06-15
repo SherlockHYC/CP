@@ -931,18 +931,10 @@ void DrawGameBoard(const Game* game) {
 }
 
 
-<<<<<<< HEAD
 void DrawBattleInterface(Game* game, Texture2D character_images[10]) {
-
-    const player* human = &game->inner_game.players[0];
-    const player* bot = &game->inner_game.players[1];
-    int distance = abs(human->locate[0] - bot->locate[0]);
-=======
-void DrawBattleInterface( Game* game) {
     DrawGameBoard(game);
-    DrawPlayerInfo(game, true); // 繪製玩家 0 (底部)
-    DrawPlayerInfo(game, false); // 繪製玩家 1 (頂部)
->>>>>>> origin/1v1_implement
+    DrawPlayerInfo(game, true);  // 玩家 0（底部）
+    DrawPlayerInfo(game, false); // 玩家 1（頂部）
 
     // --- 繪製手牌 ---
     int current_player_id = game->inner_game.now_turn_player_id;
@@ -992,7 +984,6 @@ void DrawBattleInterface( Game* game) {
         DrawText("End Turn", end_turn_btn.x + 40, end_turn_btn.y + 15, 20, WHITE);
     }
     
-<<<<<<< HEAD
     // 繪製操作按鈕
     // === End Turn 按鈕 ===
     Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
@@ -1095,10 +1086,8 @@ void DrawBattleInterface( Game* game) {
             game->current_state = GAME_STATE_CACHE_SELECT;
         }
     }
-=======
     // 顯示遊戲訊息
     DrawText(game->message, 20, GetScreenHeight() - 40, 20, WHITE);
->>>>>>> origin/1v1_implement
 }
 
 // DrawFocusSelection 函式 - 保持不變
@@ -1144,7 +1133,7 @@ void DrawGame( Game* game, Texture2D character_images[10]) {
         case GAME_STATE_PLAYER_1_TURN:
         case GAME_STATE_PLAYER_2_TURN:
         case GAME_STATE_HUMAN_TURN: // [新增] 將 PVB 的玩家回合也交給 DrawBattleInterface
-            DrawBattleInterface(game);
+            DrawBattleInterface(game, character_images);
             break;
 
         case GAME_STATE_GAME_OVER:
@@ -1152,7 +1141,7 @@ void DrawGame( Game* game, Texture2D character_images[10]) {
             break;
 
         default: // 其他狀態 (如 BOT_TURN, SHOP 等) 也使用 BattleInterface
-            DrawBattleInterface(game);
+            DrawBattleInterface(game, character_images);
             break;
     }
 
