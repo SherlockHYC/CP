@@ -20,6 +20,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx);
 void initialize_shop_skill_piles(Game* game);
 void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost);
 void apply_poison_damage(player* p, const Card* card);
+void start_turn_pvp(Game* game);
 
 bool ultra_unlocked[4] = {false};  // 預設全部鎖住
 
@@ -510,22 +511,73 @@ void UpdateGame(Game* game, bool* should_close) {
 }
 
 void UpdatePVPGame(Game* game, bool* should_close) {
-    // 這是 PVP 模式的邏輯框架。
-    // 目前，它只會檢查視窗關閉事件，以確保程式可以正常退出。
-    // 之後的階段，我們會在此處加入角色選擇、玩家回合輪替等邏輯。
-
     if (WindowShouldClose()) {
         *should_close = true;
         return;
     }
     
-    // 暫時將遊戲狀態停留在角色選擇畫面
-    if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
-         // 在此處加入 PVP 的雙方角色選擇邏輯 (下一階段)
-    }
+    // --- PVP 狀態機 ---
+    switch (game->current_state) {
+        case GAME_STATE_PVP_CHOOSE_CHAR_P1: {
+            game->message = "Player 1: Select Your Hero";
+            for(int i = 0; i < 10; i++) {
+                int row = i / 5;
+                float extra_y = (row == 1) ? 40.0f : 0.0f;
+                Rectangle btn_bounds = { 200.0f + (i % 5) * 180.0f, 280.0f + row * 200.0f + extra_y, 160, 80 };
+                
+                if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    init_player_deck(&game->inner_game.players[0], (CharacterType)i);
+                    game->p1_selected_char = i; // 記錄選擇
+                    game->current_state = GAME_STATE_PVP_CHOOSE_CHAR_P2;
+                    return;
+                }
+            }
+            break;
+        }
+            
+        case GAME_STATE_PVP_CHOOSE_CHAR_P2: {
+            game->message = "Player 2: Select Your Hero";
+            for(int i = 0; i < 10; i++) {
+                if (i == game->p1_selected_char) continue; // 跳過已被選擇的角色
 
-    // 可以在此處更新遊戲訊息以作提示
-    game->message = "PVP Mode - Choose Your Hero!";
+                int row = i / 5;
+                float extra_y = (row == 1) ? 40.0f : 0.0f;
+                Rectangle btn_bounds = { 200.0f + (i % 5) * 180.0f, 280.0f + row * 200.0f + extra_y, 160, 80 };
+
+                if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    init_player_deck(&game->inner_game.players[1], (CharacterType)i);
+                    
+                    initialize_shop_skill_piles(game);
+                    game->inner_game.players[0].locate[0] = 6;
+                    game->inner_game.players[1].locate[0] = 4;
+                    
+                    player* p0 = &game->inner_game.players[0];
+                    while(p0->hand.SIZE < 4) { draw_card(p0); }
+                    player* p1 = &game->inner_game.players[1];
+                    while(p1->hand.SIZE < 6) { draw_card(p1); }
+                    
+                    start_turn_pvp(game); // 使用 PVP 的開始回合函式
+                    return;
+                }
+            }
+            break;
+        }
+
+        // [新增] PVP 玩家回合處理 (目前為佔位)
+        case GAME_STATE_PLAYER_1_TURN:
+            game->message = "Player 1's Turn";
+            // 未來會在此處加入玩家 1 的操作邏輯
+            break;
+        
+        case GAME_STATE_PLAYER_2_TURN:
+            game->message = "Player 2's Turn";
+            // 未來會在此處加入玩家 2 的操作邏輯
+            break;
+            
+        default:
+            // 其他狀態暫不處理
+            break;
+    }
 }
 
 // init_player_deck 函式 - 保持不變
@@ -713,15 +765,52 @@ void start_turn(Game* game) {
     }
 }
 
+void start_turn_pvp(Game* game) {
+    game->turn_count++;
+    int current_player_id = game->inner_game.now_turn_player_id;
+    player* p_current = &game->inner_game.players[current_player_id];
+    
+    // 省略 PVB 中的 bot_action_timer
+    
+    // 通用的回合開始邏輯
+    if (game->pending_retaliation_level[current_player_id] > 0 && p_current->defense > 0) {
+        player* p_opponent = &game->inner_game.players[(current_player_id + 1) % 2];
+        int level = game->pending_retaliation_level[current_player_id];
+        int damage = 0, range = 0;
+        switch(level) {
+            case 1: damage = 2; range = 1; break;
+            case 2: damage = 4; range = 2; break;
+            case 3: damage = 6; range = 3; break;
+        }
+        if (damage > 0 && abs(p_current->locate[0] - p_opponent->locate[0]) <= range) {
+            apply_damage(p_current, p_opponent, damage);
+        }
+    }
+    
+    game->pending_retaliation_level[current_player_id] = 0;
+    p_current->defense = 0;
+    game->player_has_acted = false;
+    
+    // 根據當前回合玩家ID設定狀態
+    if (current_player_id == 0) {
+        game->current_state = GAME_STATE_PLAYER_1_TURN;
+        game->message = "Player 1's Turn!";
+    } else {
+        game->current_state = GAME_STATE_PLAYER_2_TURN;
+        game->message = "Player 2's Turn!";
+    }
+}
+
 // [修改] InitGame 函式，初始化商店頁面
 void InitGame(Game* game) {
     srand(time(NULL));
     memset(game, 0, sizeof(Game));
-    game->current_state = GAME_STATE_CHOOSE_CHAR;
+    game->current_state = GAME_STATE_CHOOSE_CHAR; // PVB 的預設狀態
     game->message = "Select Your Hero";
     game->turn_count = 0;
     game->pending_skill_card_index = -1;
     game->pending_basic_card_index = -1;
+    game->p1_selected_char = -1; // 初始化玩家一的選擇為「無」
     game->shop_page = 0;
     
     // (Notice) 初始化兩位玩家的反擊效果等級為 0

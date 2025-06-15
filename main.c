@@ -125,12 +125,8 @@ int main(int argc, char *argv[])
     if (selected_mode == MODE_PVB) {
         // --- 執行現有的 PVB 遊戲邏輯 ---
         Game *game = malloc(sizeof(Game));
-        if (game == NULL) {
-            printf("FATAL ERROR: Failed to allocate memory for the game.\n");
-            CloseWindow();
-            return 1;
-        }
-        InitGame(game);
+        if (game == NULL) { /* ... */ return 1; }
+        InitGame(game); // PVB 模式使用 InitGame 的預設狀態 GAME_STATE_CHOOSE_CHAR
         bool should_exit = false; 
         
         while (!should_exit && !WindowShouldClose()) {
@@ -153,22 +149,20 @@ int main(int argc, char *argv[])
         free(game);
 
     } else if (selected_mode == MODE_PVP) {
-        // --- [修改] PVP 模式的遊戲迴圈與初始化 ---
         Game *game = malloc(sizeof(Game));
-        if (game == NULL) {
-            printf("FATAL ERROR: Failed to allocate memory for PVP game.\n");
-            CloseWindow();
-            return 1;
-        }
-        InitGame(game); // 重用現有的初始化函式
-        bool should_exit = false;
+        if (game == NULL) { /* ... */ return 1; }
+        
+        InitGame(game); // 先進行通用初始化
+        // --- [修改] 手動覆寫 PVP 的初始狀態 ---
+        game->current_state = GAME_STATE_PVP_CHOOSE_CHAR_P1;
+        // ------------------------------------
 
+        bool should_exit = false;
         while (!should_exit && !WindowShouldClose()) {
-            UpdatePVPGame(game, &should_exit); // 使用新的 PVP 更新函式
-            
+            UpdatePVPGame(game, &should_exit);
             BeginDrawing();
             ClearBackground(DARKGRAY);
-            DrawGame(game, character_images); // 重用現有的繪圖函式
+            DrawGame(game, character_images);
             EndDrawing();
         }
 
