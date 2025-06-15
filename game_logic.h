@@ -28,8 +28,10 @@ typedef enum {
     GAME_STATE_OVERLOAD_SELECT,
 
     GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST,
-    GAME_STATE_CACHE_SELECT
+    GAME_STATE_CACHE_SELECT,
     
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_AWAKEN_COST,
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_MOVE_AWAKEN_COST
 } GameState;
 
 // Main Game Struct
@@ -49,6 +51,8 @@ typedef struct Game {
 
     int8_t pending_retaliation_level[2];
 
+    int thorns_attacks_left[2];
+    int thorns_damage_bonus[2];
 
     // [新] 新增一個變數來記錄當前的商店頁面 (0: 基礎牌, 1: 技能牌)
     int shop_page;
@@ -60,6 +64,9 @@ typedef struct Game {
 // Function Prototypes
 void InitGame(Game* game);
 void UpdateGame(Game* game, bool *should_close); 
+void resolve_sleeping_beauty_defense(Game* game, int chosen_awaken_cost); // 新增函式原型
+void resolve_sleeping_beauty_move(Game* game, int chosen_awaken_cost); // [新增] 移動技能結算函式原型
+
 
 int apply_damage(player* attacker, player* defender, int base_damage);
 
