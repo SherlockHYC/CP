@@ -29,6 +29,7 @@ void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool 
 void DrawUltraOverlay(const Game* game); // ✅ 加這行
 void DrawSleepingBeautyHPChoiceOverlay(const Game* game);
 void DrawSleepingBeautyAwakenChoiceOverlay(const Game* game);
+void DrawSleepingBeautyMoveAwakenChoiceOverlay(const Game* game); // [新增]
 
 
 // =================================================================
@@ -1129,6 +1130,9 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
             DrawSleepingBeautyAwakenChoiceOverlay(game);
             break;
         }
+        case GAME_STATE_SLEEPING_BEAUTY_CHOOSE_MOVE_AWAKEN_COST: // [新增]
+            DrawSleepingBeautyMoveAwakenChoiceOverlay(game);
+            break;
         
         
         default:
@@ -1141,6 +1145,7 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
 }
 
 // [修改] DrawShop 函式，將技能牌分頁改為堆疊顯示相同卡牌
+#define HAND_SCALE 0.8f
 void DrawShop(const Game* game) {
     float screenWidth = GetScreenWidth();
     float screenHeight = GetScreenHeight();
@@ -1327,22 +1332,29 @@ void DrawSkillPairingOverlay(const Game* game) {
         default: required_type = GENERIC; break; // 無效類型
     }
 
-    int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
+    int scaled_card_width = CARD_WIDTH * HAND_SCALE;
+    int scaled_card_height = CARD_HEIGHT * HAND_SCALE;
+    int spacing = 15 * HAND_SCALE;
+
+    int hand_width = human->hand.SIZE * (scaled_card_width + spacing) - spacing;
     float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
-    float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
+    float hand_y = GetScreenHeight() - scaled_card_height - 20;
 
     for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-        Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
+        Rectangle card_bounds = { hand_start_x + i * (scaled_card_width + spacing), hand_y, scaled_card_width, scaled_card_height };
         const Card* card_info = get_card_info(human->hand.array[i]);
         if (!card_info) continue;
+
+        DrawCard(card_info, card_bounds, false, false); // 繪製卡牌本身
 
         if ((int)i == game->pending_skill_card_index) {
             DrawRectangleRoundedLinesEx(card_bounds, 0.08f, 10, 5, YELLOW);
         } else {
-            // [修改] 只高亮顯示類型相符的基礎牌
             if (card_info->type == required_type) {
-                DrawCard(card_info, card_bounds, false, false);
                 DrawRectangleRoundedLinesEx(card_bounds, 0.08f, 10, 3, LIME);
+            } else {
+                // 為不符合條件的牌加上灰色遮罩
+                DrawRectangleRec(card_bounds, Fade(BLACK, 0.7f));
             }
         }
     }
@@ -2298,8 +2310,36 @@ void DrawSleepingBeautyAwakenChoiceOverlay(const Game* game) {
     if (!skill_card) return;
 
     // 計算最大可消耗值
-    int max_cost = (p->sleepingBeauty.AWAKEN == 1) ? skill_card->level : 0;
+    int max_cost = (p->sleepingBeauty.AWAKEN == 1) ? 3 : 0;
     if (p->sleepingBeauty.AWAKEN_TOKEN < (uint32_t)max_cost) {
+        max_cost = p->sleepingBeauty.AWAKEN_TOKEN;
+    }
+
+    float button_width = 100, button_height = 50, padding = 10;
+    float total_width = (max_cost + 1) * (button_width + padding) - padding;
+    float start_x = (GetScreenWidth() - total_width) / 2.0f;
+    float button_y = GetScreenHeight() / 2.0f;
+
+    for (int i = 0; i <= max_cost; ++i) {
+        Rectangle button_bounds = {start_x + i * (button_width + padding), button_y, button_width, button_height};
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), button_bounds);
+        DrawRectangleRec(button_bounds, hovered ? LIGHTGRAY : RAYWHITE);
+        DrawRectangleLinesEx(button_bounds, 2, hovered ? DARKGRAY : GRAY);
+        const char* text = TextFormat("%d", i);
+        DrawTextEx(font, text, (Vector2){button_bounds.x + button_width/2 - MeasureTextEx(font, text, 24, 1).x/2, button_bounds.y + button_height/2 - 12}, 24, 1, BLACK);
+    }
+}
+
+void DrawSleepingBeautyMoveAwakenChoiceOverlay(const Game* game) {
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+    const char* title = "選擇消耗覺醒值以強化傷害";
+    DrawTextEx(font, title, (Vector2){GetScreenWidth()/2.0f - MeasureTextEx(font, title, 32, 1).x/2, GetScreenHeight()/2.0f - 100}, 32, 1, WHITE);
+
+    const player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
+    
+    // 計算最大可消耗值 (最多3，或當前剩餘值)
+    int max_cost = 3;
+    if (p->sleepingBeauty.AWAKEN_TOKEN < 3) {
         max_cost = p->sleepingBeauty.AWAKEN_TOKEN;
     }
 

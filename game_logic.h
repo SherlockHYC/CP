@@ -25,7 +25,8 @@ typedef enum {
     GAME_STATE_ULTRA,
 
     GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST,
-    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_AWAKEN_COST
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_AWAKEN_COST,
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_MOVE_AWAKEN_COST
 } GameState;
 
 // Main Game Struct
@@ -56,6 +57,7 @@ typedef struct Game {
 void InitGame(Game* game);
 void UpdateGame(Game* game, bool *should_close); 
 void resolve_sleeping_beauty_defense(Game* game, int chosen_awaken_cost); // 新增函式原型
+void resolve_sleeping_beauty_move(Game* game, int chosen_awaken_cost); // [新增] 移動技能結算函式原型
 
 
 int apply_damage(player* attacker, player* defender, int base_damage);
