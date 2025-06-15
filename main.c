@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 
     // ✅ 在這裡載入中文點陣字型（建議放在 assets/fonts）
     // 分配足夠空間來存放中英文 + 數字 + 標點（20902 + 26*2 + 10 + 標點）
-    int total = 20902 + 26 + 26 + 10 + 8;
+    int total = 20902 + 26 + 26 + 10 + 8 + 14;
     int *codepoints = malloc(sizeof(int) * total);
     int idx = 0;
 
@@ -58,6 +58,20 @@ int main(int argc, char *argv[])
     codepoints[idx++] = 0x2D; // -
     codepoints[idx++] = 0x5B; // [
     codepoints[idx++] = 0x5D; // ]
+    codepoints[idx++] = 0x28; // (
+    codepoints[idx++] = 0x29; // )
+    codepoints[idx++] = 0xFF0C; // ，
+    codepoints[idx++] = 0x2F; // / 
+    codepoints[idx++] = 0x22; // "
+    codepoints[idx++] = 0x3C; // <
+    codepoints[idx++] = 0x3E; // >
+    codepoints[idx++] = 0x2C; // , 半形逗號 ✅
+    codepoints[idx++] = 0x2264; // ≤ 小於等於符號
+    codepoints[idx++] = 0x2265; // ≥ 大於等於符號
+    codepoints[idx++] = 0x3D; // = 等號 ✅
+    codepoints[idx++] = 0x2264; // ≤
+    codepoints[idx++] = 0x2265; // ≥
+    codepoints[idx++] = 0x2192; // → 右箭頭符號
 
 
     // 中文區段：0x4E00 ~ 0x9FFF

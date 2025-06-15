@@ -18,6 +18,8 @@ void DrawPlayerInfo(const Game* game, bool is_human);
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card);
 void DrawSkillPairingOverlay(const Game* game);
 void apply_buy_card(Game* game, int card_id);
+void DrawPassiveInfoOverlay(const Game* game);
+void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool isSelected);
 
 // =================================================================
 //                               繪製函式
@@ -72,6 +74,539 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
         // --- 顯示卡片 cost ---
         //DrawTextEx(font, TextFormat("Cost: %d", card->cost), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 18 }, 14, 1, ORANGE);
     }
+
+    
+
+    bool isRedHoodSkill        = (card->id >= 501 && card->id <= 503) ||
+                                 (card->id >= 601 && card->id <= 603) ||
+                                 (card->id >= 701 && card->id <= 703);
+    
+    bool isSnowWhiteSkill      = (card->id >= 511 && card->id <= 513) ||
+                                 (card->id >= 611 && card->id <= 613) ||
+                                 (card->id >= 711 && card->id <= 713);
+    
+    bool isSleepingBeautySkill = (card->id >= 521 && card->id <= 523) ||
+                                 (card->id >= 621 && card->id <= 623) ||
+                                 (card->id >= 721 && card->id <= 723);
+    
+    // 愛麗絲技能卡 ID：531~533, 631~633, 731~733
+    bool isAliceSkill          = (card->id >= 531 && card->id <= 533) ||
+                                 (card->id >= 631 && card->id <= 633) ||
+                                 (card->id >= 731 && card->id <= 733);
+    
+    // 花木蘭技能卡 ID：541~543, 641~643, 741~743
+    bool isMulanSkill = (card->id >= 541 && card->id <= 543) ||
+                        (card->id >= 641 && card->id <= 643) ||
+                        (card->id >= 741 && card->id <= 743);
+
+    // 輝夜姬技能卡 ID：551~553, 651~653, 751~753
+    bool isKaguyaSkill = (card->id >= 551 && card->id <= 553) ||
+                        (card->id >= 651 && card->id <= 653) ||
+                        (card->id >= 751 && card->id <= 753);
+
+    // 美人魚技能卡 ID：561~563, 661~663, 761~763
+    bool isMermaidSkill = (card->id >= 561 && card->id <= 563) ||
+                        (card->id >= 661 && card->id <= 663) ||
+                        (card->id >= 761 && card->id <= 763);
+
+    // 火柴女孩技能卡 ID：571~573, 671~673, 771~773
+    bool isMatchGirlSkill = (card->id >= 571 && card->id <= 573) ||
+                            (card->id >= 671 && card->id <= 673) ||
+                            (card->id >= 771 && card->id <= 773);
+
+    // 桃樂絲技能卡 ID：581~583, 681~683, 781~783
+    bool isDorothySkill = (card->id >= 581 && card->id <= 583) ||
+                        (card->id >= 681 && card->id <= 683) ||
+                        (card->id >= 781 && card->id <= 783);
+
+    // 山魯佐德技能卡 ID：591~593, 691~693, 791~793
+    bool isScheherazadeSkill = (card->id >= 591 && card->id <= 593) ||
+                            (card->id >= 691 && card->id <= 693) ||
+                            (card->id >= 791 && card->id <= 793);
+
+                        
+    // 顯示小紅帽卡牌說明
+    if (is_hovered && isRedHoodSkill) {
+        int level = card->id / 100 - 4;   // 501 → 1, 601 → 2, 701 → 3
+        int type  = card->id % 10;        // 1:攻擊 2:防禦 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+
+        if (type == 1) {
+            if (level == 1) line1 = "射程1, 傷害1+x";
+            if (level == 2) line1 = "射程2, 傷害2+x";
+            if (level == 3) line1 = "射程3, 傷害3+x";
+        } else if (type == 2) {
+            if (level == 1) {
+                line1 = "射程1, 傷害1, 防禦x";
+                line2 = "防禦>0時對範圍1造成2傷害";
+            }
+            if (level == 2) {
+                line1 = "射程2, 傷害2, 防禦x";
+                line2 = "防禦>0時對範圍2造成4傷害";
+            }
+            if (level == 3) {
+                line1 = "射程3, 傷害3, 防禦x";
+                line2 = "防禦>0時對範圍3造成6傷害";
+            }
+        } else if (type == 3) {
+            if (level == 1) line1 = "射程1, 傷害1, 擊退x";
+            if (level == 2) line1 = "射程2, 傷害2, 擊退x";
+            if (level == 3) line1 = "射程3, 傷害3, 擊退x";
+        }
+
+        // ⬛ 對話框設計
+        float descWidth = 270;
+        float descHeight =120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,  // 顯示在卡片上方
+            descWidth,
+            descHeight
+        };
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));  // ✅ 半透明背景
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        if (strlen(line2) > 0) {
+            DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 26 }, 16, 1, WHITE);
+        }
+    }
+
+        // ✅ 白雪公主技能說明
+    else if (is_hovered && isSnowWhiteSkill) {
+        int level = card->id / 100 - 4;  // 511→1, 611→2, 711→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+
+        if (type == 1) {
+            line1 = TextFormat("射程1, 傷害%d+x", level);
+            line2 = TextFormat("將對手牌庫最上面%d張", level);
+            line3 = "放入棄牌區";
+        } else if (type == 2) {
+            line1 = TextFormat("射程1, 傷害%d", level);
+            line2 = "將中毒牌庫頂部至多x張";
+            line3 = "放入對手棄牌區";
+        } else if (type == 3) {
+            line1 = TextFormat("射程x+%d, 傷害%d", level - 1, level);
+            line2 = "將自己放置到與敵人";
+            line3 = "相鄰的格子";
+        }
+
+        float descWidth = 270;
+        float descHeight =120; 
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+    }
+    
+    
+    //睡美人技能說明
+    else if (is_hovered && isSleepingBeautySkill) {
+        int level = card->id / 100 - 4;  // 521→1, 621→2, 721→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+
+        if (type == 1) {
+            line1 = TextFormat("射程1, 傷害%dx", level);
+            line2 = TextFormat("可對自己造成y傷害獲得", "");
+            line3 = TextFormat("傷害+y，y最多為%d", level);
+        } else if (type == 2) {
+            line1 = "直到回合結束前";
+            line2 = TextFormat("x+Token 次攻擊將獲得傷害+%d", level);
+            line3 = "（傷害不須連續使用）";
+        } else if (type == 3) {
+            line1 = TextFormat("射程%d, 傷害x+Token", level + 1);
+            line2 = "將對手向我方向移動x格";
+            line3 = "";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+    }
+
+    // 愛麗絲技能說明
+    else if (is_hovered && isAliceSkill) {
+        int level = card->id / 100 - 4;  // 531→1, 631→2, 731→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能（紅心皇后身分）
+            line1 = TextFormat("射程%d, 傷害%d", level, level);
+            line2 = TextFormat("展示 %d 張牌，沒展示造成額外傷害", level + 2);
+            line3 = "可從展示牌找供應區同名牌入棄牌堆";
+            line4 = "身分轉變為紅心皇后";
+        } else if (type == 2) {
+            // 防禦技能（瘋帽子身分）
+            line1 = TextFormat("防禦 %d，移除基本牌", level);
+            line2 = "每移除一張，從基本牌庫放一張";
+            line3 = TextFormat("等級<= %d 基本牌入棄牌堆", level);
+            line4 = "身分轉變為瘋帽子";
+        } else if (type == 3) {
+            // 移動技能（柴郡貓身分）
+            line1 = TextFormat("向一方向移動至多 %d+x 格", level);
+            line2 = "穿過對手時可抽牌";
+            line3 = TextFormat("抽 %d 張牌", level);
+            line4 = "身分轉變為柴郡貓";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120; // 多一行 → 增高
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 花木蘭技能說明
+    else if (is_hovered && isMulanSkill) {
+        int level = card->id / 100 - 4;  // 541→1, 641→2, 741→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程1, 傷害%d+x", level);
+            line2 = "可將對手移動到你相鄰的一格";
+            line3 = "若對手在邊緣，隨機棄一張手牌";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = "防禦x，回合結束時抽牌階段";
+            line2 = TextFormat("可花y氣額外抽y張牌，y最多為%d", level);
+            line3 = "";
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程1, 傷害%d，擊退對手x格", level);
+            line2 = "自己移動到與對手相鄰的格子";
+            line3 = "若對手在邊緣，隨機棄一張手牌";
+            line4 = "";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 輝夜姬技能說明
+    else if (is_hovered && isKaguyaSkill) {
+        int level = card->id / 100 - 4;  // 551→1, 651→2, 751→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程1, 傷害%d+x", level);
+            line2 = "若當前擁有3點防禦";
+            line3 = "則額外+1傷害";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = TextFormat("防禦%d+x，展示牌庫頂 %d 張牌", level, level);
+            line2 = "若是防禦技能牌則加入手牌";
+            line3 = "否則可選擇棄掉或放回頂部";
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程x, 傷害%d，失去1生命", level);
+            line2 = "可移除手牌或棄牌堆中一張牌";
+            if (level >= 2) {
+                line3 = "持續：若敵人超出射程4-x";
+                line4 = TextFormat("則對他造成 %d 點傷害", level * 2);
+            } else {
+                line3 = "";
+                line4 = "";
+            }
+        }
+
+        float descWidth = 270;
+        float descHeight = 120; 
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+
+    // 美人魚技能說明
+    else if (is_hovered && isMermaidSkill) {
+        int level = card->id / 100 - 4;  // 561→1, 661→2, 761→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程%d, 傷害%d+x", level, level);
+            line2 = TextFormat("若敵在觸手格, 傷害+%d", level);
+            if (level == 1) line3 = "若你在觸手格, 能量+1";
+            else line3 = "若你在觸手格, 能量+3";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = "若敵在觸手格, 對其造成x傷害";
+            line2 = TextFormat("你可移動到觸手格並獲得防禦%d", level);
+            line3 = "（不能與對手在同一格）";
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = "選一觸手並移動至多x格(≥1)";
+            line2 = TextFormat("若你在觸手格, 抽 %d 張牌", level);
+            if (level == 1) {
+                line3 = "";
+                line4 = "";
+            } else {
+                line3 = TextFormat("若敵在觸手格, 捨棄 %d 張手牌", level - 1);
+                line4 = "";
+            }
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 火柴女孩技能說明
+    else if (is_hovered && isMatchGirlSkill) {
+        int level = card->id / 100 - 4;  // 571→1, 671→2, 771→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程1, 傷害%d+x", level);
+            line2 = "可花能量強化傷害";
+            line3 = "每花3點能量 → 傷害+1";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = "防禦1，可失去生命來抽牌";
+            line2 = TextFormat("最多失去 %d 點生命", level);
+            line3 = TextFormat("抽取 %d 張牌", level);
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程%d, 傷害%d", level, level);
+            line2 = "可將對手棄牌堆中火柴放回火柴庫";
+            if (level == 1) {
+                line3 = "每放1張 → 能量+1";
+                line4 = "";
+            } else if (level == 2) {
+                line3 = "每放1張 → 能量+2, 生命+1";
+                line4 = "";
+            } else {
+                line3 = "每放1張 → 能量+3, 生命+2";
+                line4 = "";
+            }
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 桃樂絲技能說明
+    else if (is_hovered && isDorothySkill) {
+        int level = card->id / 100 - 4;  // 581→1, 681→2, 781→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程1, 傷害%d+x，擊退x格", level);
+            line2 = "若對手無法後退";
+            line3 = "則每格無法後退 → 傷害+1";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = TextFormat("射程%d, 傷害x", level + 5);  // 6~8
+            line2 = TextFormat("可棄至多 %d 張牌", level);
+            line3 = TextFormat("抽取 y+1 張牌 (y為棄牌數)", level);
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程%d+x", level);
+            line2 = "傷害 = y+1";
+            line3 = "y為你與對手之間的格子數";
+            line4 = "";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 山魯佐德技能說明
+    else if (is_hovered && isScheherazadeSkill) {
+        int level = card->id / 100 - 4;  // 591→1, 691→2, 791→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+        const char* line5 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程%d, 傷害%d+x", level, level);
+            line2 = TextFormat("可翻轉最多 %d 枚", level);
+            line3 = "藍色命運TOKEN為紅色";
+            line4 = "";
+            line5 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = "防禦x，放置命運TOKEN";
+            line2 = TextFormat("可放至對手供應區最多 %d 張牌", level);
+            line3 = "持續：對手購買該牌時";
+            line4 = "需額外支付1點能量";
+            line5 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程%d, 傷害%d", level, level);
+            line2 = "展示對手牌庫頂x張牌";
+            line3 = "每來自帶藍TOKEN的牌庫";
+            line4 = "就翻轉該牌庫1枚TOKEN為紅色";
+            line5 = "每張展示牌可棄掉或放回原位";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;  // 五行顯示高度
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6  }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+        DrawTextEx(font, line5, (Vector2){ descBox.x + 10, descBox.y + 102 }, 16, 1, WHITE);
+    }
+
+
 }
 
 // DrawPlayerInfo 函式 - 保持不變
@@ -93,6 +628,21 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
     DrawTextEx(font, TextFormat("HP: %d", p->life), (Vector2){ (float)x_pos + 15, (float)y_pos + 45 }, 20, 1, LIME);
     DrawTextEx(font, TextFormat("Defense: %d", p->defense), (Vector2){ (float)x_pos + 110, (float)y_pos + 45 }, 20, 1, GRAY);
     DrawTextEx(font, TextFormat("Energy: %d", p->energy), (Vector2){ (float)x_pos + 210, (float)y_pos + 45 }, 20, 1, SKYBLUE);
+
+    // 被動技能按鈕（僅在玩家一側顯示）
+    if (is_human) {
+        Rectangle passive_btn = { x_pos + 160, y_pos - 50, 40, 40 };
+        bool hover = CheckCollisionPointRec(GetMousePosition(), passive_btn);
+        bool click = hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+
+        // 改成使用你自定義的函式
+        DrawPassiveButton(passive_btn, "P", hover, game->current_state == GAME_STATE_PASSIVE_INFO);
+
+        if (click) {
+            ((Game*)game)->current_state = GAME_STATE_PASSIVE_INFO;
+        }
+    }
+
 }
 
 //介面參數
@@ -292,7 +842,8 @@ void DrawBattleInterface(const Game* game) {
     // 繪製玩家手牌
     for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
         Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
-        bool is_hovered = CheckCollisionPointRec(GetMousePosition(), card_bounds);
+        bool is_hovered = (game->current_state != GAME_STATE_PASSIVE_INFO) &&
+                        CheckCollisionPointRec(GetMousePosition(), card_bounds);
         const Card* card_info = get_card_info(human->hand.array[i]);
         
         // 繪製基礎卡牌
@@ -345,20 +896,33 @@ void DrawBattleInterface(const Game* game) {
     }
     
     // 繪製操作按鈕
+    // === End Turn 按鈕 ===
     Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
-    bool et_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
+    bool et_hover = false;
+    if (game->current_state == GAME_STATE_HUMAN_TURN) {
+        et_hover = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
+    }
     DrawRectangleRec(end_turn_btn, et_hover ? LIME : GREEN);
     DrawTextEx(font, "End Turn", (Vector2){ end_turn_btn.x + 50, end_turn_btn.y + 15 }, 20, 1, BLACK);
 
+    // === Focus 按鈕 ===
     Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
-    bool focus_hover = CheckCollisionPointRec(GetMousePosition(), focus_btn);
+    bool focus_hover = false;
+    if (game->current_state == GAME_STATE_HUMAN_TURN && !game->player_has_acted) {
+        focus_hover = CheckCollisionPointRec(GetMousePosition(), focus_btn);
+    }
     DrawRectangleRec(focus_btn, game->player_has_acted ? GRAY : (focus_hover ? YELLOW : GOLD));
     DrawTextEx(font, "Focus", (Vector2){ focus_btn.x + 60, focus_btn.y + 15 }, 20, 1, BLACK);
 
+    // === Shop 按鈕 ===
     Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
-    bool shop_hover = CheckCollisionPointRec(GetMousePosition(), shop_btn);
+    bool shop_hover = false;
+    if (game->current_state == GAME_STATE_HUMAN_TURN) {
+        shop_hover = CheckCollisionPointRec(GetMousePosition(), shop_btn);
+    }
     DrawRectangleRec(shop_btn, shop_hover ? SKYBLUE : BLUE);
     DrawTextEx(font, "Shop", (Vector2){ shop_btn.x + 65, shop_btn.y + 15 }, 20, 1, WHITE);
+
 
     // 繪製回合提示
     const char* turn_text = "";
@@ -461,6 +1025,10 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
         default:
             break;
     }
+
+    if (game->current_state == GAME_STATE_PASSIVE_INFO) {
+        DrawPassiveInfoOverlay(game);
+    }
 }
 
 
@@ -531,85 +1099,81 @@ void DrawShop(const Game* game) {
         float offsetY = 100;  // 往下移動 100px
         int chara = game->inner_game.players[0].character;
 
-        if (chara == 0) {
+        if (chara >= 0 && chara < 10) {
             DrawTextEx(font, "攻擊技能", (Vector2){ 100 + offsetX, 110 + offsetY }, 22, 1, RED);
             DrawTextEx(font, "防禦技能", (Vector2){ 400 + offsetX, 110 + offsetY }, 22, 1, DARKGREEN);
             DrawTextEx(font, "移動技能", (Vector2){ 700 + offsetX, 110 + offsetY }, 22, 1, PURPLE);
 
             for (int type = 0; type < 3; ++type) {
-                const vector* pile = &game->shop_skill_piles[0][type];
-
+                const vector* pile = &game->shop_skill_piles[chara][type];
                 int lv3_count = 0, lv2_count = 0;
-                
-                // LV3 卡
-                int lv3_index = -1;
+                int lv3_index = -1, lv2_index = -1;
                 bool lv2_empty = true;
 
-                // 先找最上層的 LV3 卡牌（從後往前找）
+                // 找出 LV3 卡最上層
                 for (int i = pile->SIZE - 1; i >= 0; --i) {
-                    if (pile->array[i] >= 700 && pile->array[i] < 800 && lv3_index == -1) {
-                        lv3_index = i;
-                    }
-                    if (pile->array[i] >= 600 && pile->array[i] < 700) {
-                        lv2_empty = false; // 只要還有 LV2 就設為 false
-                    }
+                    int id = pile->array[i];
+                    if (id >= 700 && id < 800 && lv3_index == -1) lv3_index = i;
+                    if (id >= 600 && id < 700) lv2_empty = false;
                 }
 
+                // 顯示 LV3 卡
                 for (uint32_t i = 0; i < pile->SIZE; ++i) {
                     int card_id = pile->array[i];
                     if (card_id >= 700 && card_id < 800) {
-                        Rectangle card_rect = {
+                        Rectangle rect = {
                             80 + offsetX + type * 300,
                             150 + offsetY + lv3_count * 40,
                             CARD_WIDTH, CARD_HEIGHT
                         };
 
                         const Card* card = get_card_by_id(card_id);
-
                         bool is_top = ((int)i == lv3_index);
                         bool can_hover = is_top && lv2_empty;
-                        bool hovered = can_hover && CheckCollisionPointRec(GetMousePosition(), card_rect);
+                        bool hovered = can_hover && CheckCollisionPointRec(GetMousePosition(), rect);
 
                         if (hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                             apply_buy_card((Game*)game, card_id);
                         }
 
-                        DrawCard(card, card_rect, hovered, false);
+                        DrawCard(card, rect, hovered, false);
                         lv3_count++;
                     }
                 }
 
-                // LV2 卡
-                int lv2_index = -1;
+                // 找出 LV2 最上層
                 for (int i = pile->SIZE - 1; i >= 0; --i) {
-                    if (pile->array[i] >= 600 && pile->array[i] < 700) {
+                    int id = pile->array[i];
+                    if (id >= 600 && id < 700) {
                         lv2_index = i;
                         break;
                     }
                 }
 
+                // 顯示 LV2 卡
                 for (uint32_t i = 0; i < pile->SIZE; ++i) {
                     int card_id = pile->array[i];
                     if (card_id >= 600 && card_id < 700) {
-                        Rectangle card_rect = {
+                        Rectangle rect = {
                             80 + offsetX + type * 300,
                             150 + offsetY + (lv3_count + lv2_count) * 40,
                             CARD_WIDTH, CARD_HEIGHT
                         };
 
                         const Card* card = get_card_by_id(card_id);
-
                         bool is_top = ((int)i == lv2_index);
-                        bool hovered = is_top && CheckCollisionPointRec(GetMousePosition(), card_rect);
+                        bool hovered = is_top && CheckCollisionPointRec(GetMousePosition(), rect);
+
                         if (hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                             apply_buy_card((Game*)game, card_id);
                         }
 
-                        DrawCard(card, card_rect, hovered, false);
+                        DrawCard(card, rect, hovered, false);
                         lv2_count++;
                     }
                 }
-                // ➕ 顯示當前 cost
+
+                // ➕ 顯示 cost
                 int cost = (lv2_count > 0) ? 2 : 4;
                 char cost_text[32];
                 sprintf(cost_text, "Cost: %d", cost);
@@ -620,9 +1184,7 @@ void DrawShop(const Game* game) {
                 DrawTextEx(font, cost_text, cost_pos, 20, 1, ORANGE);
             }
         } else {
-
             DrawTextEx(font, "技能商店尚未開放", (Vector2){ 330 + offsetX, 300 + offsetY }, 28, 1, RED);
-        
         }
     }
 
@@ -679,3 +1241,715 @@ void DrawSkillPairingOverlay(const Game* game) {
         }
     }
 }
+
+void DrawPassiveInfoOverlay(const Game* game) {
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+    DrawTextEx(font, "角色被動技能", (Vector2){ 100, 80 }, 40, 2, WHITE);
+
+    const player* p = &game->inner_game.players[0];
+    int chara = p->character;
+
+    const vector* atk_pile = &game->shop_skill_piles[chara][0];
+    const vector* def_pile = &game->shop_skill_piles[chara][1];
+    const vector* mov_pile = &game->shop_skill_piles[chara][2];
+
+    int atk_lv2 = 0, atk_lv3 = 0;
+    int def_lv2 = 0, def_lv3 = 0;
+    int mov_lv2 = 0, mov_lv3 = 0;
+
+    for (uint32_t i = 0; i < atk_pile->SIZE; ++i) {
+        int id = atk_pile->array[i];
+        if (id >= 600 && id < 700) atk_lv2++;
+        if (id >= 700 && id < 800) atk_lv3++;
+    }
+    for (uint32_t i = 0; i < def_pile->SIZE; ++i) {
+        int id = def_pile->array[i];
+        if (id >= 600 && id < 700) def_lv2++;
+        if (id >= 700 && id < 800) def_lv3++;
+    }
+    for (uint32_t i = 0; i < mov_pile->SIZE; ++i) {
+        int id = mov_pile->array[i];
+        if (id >= 600 && id < 700) mov_lv2++;
+        if (id >= 700 && id < 800) mov_lv3++;
+    }
+
+    int atk_bought_lv2 = 2 - atk_lv2;    
+    int def_bought_lv2 = 2 - def_lv2;
+    int mov_bought_lv2 = 2 - mov_lv2;
+    
+
+    // 是否解鎖
+    bool unlock_atk_lv2 = atk_bought_lv2 >= 2;
+    bool unlock_atk_cache = atk_lv3 == 0;
+    bool unlock_def_lv2 = def_bought_lv2 >= 2;
+    bool unlock_def_cache = def_lv3 == 0;
+    bool unlock_mov_lv2 = mov_bought_lv2 >= 2;
+    bool unlock_mov_cache = mov_lv3 == 0;
+
+    int x = 150, y = 180;  // 左上角開始座標
+    int line_gap = 28;     // 每行高度
+    
+    switch (chara) {
+        case 0: // 小紅帽
+            DrawTextEx(font, "- 暴打別人一頓", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+            // 🟦 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "過載燃燒: 使用移動或攻擊技能時，可捨棄最多1張技能牌，攻擊+x(x為捨棄的技能牌等級)"
+                            : "過載燃燒(未解鎖): 使用移動或攻擊技能時，可捨棄最多1張技能牌，攻擊+x(x為捨棄的技能牌等級)",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? TextFormat("板載緩存A: 把最多一張牌留到下個回合")
+                                : "板載緩存A(未解鎖): 把最多一張牌留到下個回合",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "兜帽系統: 當對手對我造成傷害時，可捨棄最多1張技能牌，傷害抵免x(x為捨棄的技能牌等級)"
+                            : "兜帽系統(未解鎖): 當對手對我造成傷害時，可捨棄最多1張技能牌，傷害抵免x(x為捨棄的技能牌等級)",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "板載緩存B: 把最多一張牌留到下個回合"
+                                : "板載緩存B(未解鎖): 把最多一張牌留到下個回合",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "變異感應: 使用移動或攻擊技能時，可捨棄最多1張技能牌，射程+x(x為捨棄的技能牌等級)"
+                            : "變異感應(未解鎖): 使用移動或攻擊技能時，可捨棄最多1張技能牌，射程+x(x為捨棄的技能牌等級)",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "板載緩存C: 把最多一張牌留到下個回合"
+                                : "板載緩存C(未解鎖): 把最多一張牌留到下個回合",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+
+        case 1: // 白雪公主
+            DrawTextEx(font, "- 中毒標記會持續傷害敵人", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "水晶之棺: 對對手造成2點以上傷害時，將1張中毒牌放入其棄牌堆"
+                            : "水晶之棺(未解鎖): 對對手造成2點以上傷害時，將1張中毒牌放入其棄牌堆",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "至純之毒A: 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命"
+                                : "至純之毒A(未解鎖): 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "墮落之劫: 使用防禦技能放中毒牌時，可選擇改為洗入對手牌庫"
+                            : "墮落之劫(未解鎖): 使用防禦技能放中毒牌時，可選擇改為洗入對手牌庫",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "至純之毒B: 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命"
+                                : "至純之毒B(未解鎖): 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "劇毒之蝕: 移動行動穿過對手時，將1張中毒牌放入其棄牌堆"
+                            : "劇毒之蝕(未解鎖): 移動行動穿過對手時，將1張中毒牌放入其棄牌堆",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "至純之毒C: 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命"
+                                : "至純之毒C(未解鎖): 每張中毒牌進入對手棄牌堆時，對手額外失去1點生命",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 2: // 睡美人
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+            DrawTextEx(font, "- 流血才能變強", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "放血療法: 每回合限1次，技能或行動需捨基本牌時，可\"失去\"2/4/6生命當作Lv1/2/3"
+                                : "放血療法(未解鎖): 每回合限1次，技能/行動需捨基本牌時，可\"失去\"2/4/6生命當作Lv1/2/3",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "強制治療A: 立即回復5點生命，使用後將此效果移除"
+                                : "強制治療A(未解鎖): 立即回復5點生命，使用後將此效果移除",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "血祭之禮: 每回合限一次，當你造成至少2/4/6點傷害時，可從棄牌堆中挑一張不超過lv1/2/3的攻擊牌加到手牌"
+                                : "血祭之禮(未解鎖): 每回合限一次，當你造成至少2/4/6點傷害時，可以從棄牌堆中挑一張不超過lv1/2/3的攻擊牌加到手牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "強制治療B: 立即回復5點生命，使用後將此效果移除"
+                                : "強制治療B(未解鎖): 立即回復5點生命，使用後將此效果移除",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "精神屏障: 使用移動技能時，獲得等同等級的防禦"
+                                : "精神屏障(未解鎖): 使用移動技能時，獲得等同等級的防禦",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "強制治療C: 立即回復5點生命，使用後將此效果移除"
+                                : "強制治療C(未解鎖): 立即回復5點生命，使用後將此效果移除",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+        
+        case 3: // 愛麗絲
+            DrawTextEx(font, "- 更換身份觸發不同能力", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "砍掉她的頭: 紅心皇后狀態下，攻擊技能將牌放入棄牌堆時，可改為加入手牌"
+                               : "砍掉她的頭(未解鎖): 紅心皇后狀態下，攻擊技能將牌放入棄牌堆時，可改為加入手牌",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "開始我的表演A: 回合結束抽牌時，額外抽1張(可疊加)"
+                                : "開始我的表演A(未解鎖): 回合結束抽牌時，額外抽1張(可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "仙境降臨: 瘋帽子狀態下，防禦技能將牌放入棄牌堆時，可改為加入手牌"
+                               : "仙境降臨(未解鎖): 瘋帽子狀態下，防禦技能將牌放入棄牌堆時，可改為加入手牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "開始我的表演B: 回合結束抽牌時，額外抽1張(可疊加)"
+                                : "開始我的表演B(未解鎖): 回合結束抽牌時，額外抽1張(可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "我們全是瘋子: 柴郡貓狀態下，穿過對手或被穿過時可抽1張牌"
+                               : "我們全是瘋子(未解鎖): 柴郡貓狀態下，穿過對手或被穿過時可抽1張牌",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "開始我的表演C: 回合結束抽牌時，額外抽1張(可疊加)"
+                                : "開始我的表演C(未解鎖): 回合結束抽牌時，額外抽1張(可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 4: // 花木蘭
+            DrawTextEx(font, "- 累積氣提升爆發力", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "氣貫全身: 使用攻擊技能或行動時，可消耗x點氣使傷害+x (最多3)"
+                               : "氣貫全身(未解鎖): 使用攻擊技能或行動時，可消耗x點氣使傷害+x (最多3)",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "暴風前夕A: 回合開始時，獲得1點氣 (可疊加)"
+                                : "暴風前夕A(未解鎖): 回合開始時，獲得1點氣 (可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "主宰命運: 在你回合結束階段抽取卡牌之後，你可以棄掉1張手牌，之後再抽取1張牌"
+                               : "主宰命運(未解鎖): 在你回合結束階段抽取卡牌之後，你可以棄掉1張手牌，之後再抽取1張牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "暴風前夕B: 回合開始時，獲得1點氣 (可疊加)"
+                                : "暴風前夕B(未解鎖): 回合開始時，獲得1點氣 (可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "長驅直入: 使用移動行動時，可消耗x點氣額外移動x格 (最多3)"
+                               : "長驅直入(未解鎖): 使用移動行動時，可消耗x點氣額外移動x格 (最多3)",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "暴風前夕C: 回合開始時，獲得1點氣 (可疊加)"
+                                : "暴風前夕C(未解鎖): 回合開始時，獲得1點氣 (可疊加)",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 5: // 輝夜姬
+            DrawTextEx(font, "- 月之力會吞噬一切來犯之敵", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "懲戒時刻: 防禦上限+1，每回合限1次，可將防禦牌當作同等級攻擊牌"
+                               : "懲戒時刻(未解鎖): 防禦上限+1，每回合限1次，可將防禦牌當作同等級攻擊牌",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "月下沉思A: 回合結束時，獲得2點防禦"
+                                : "月下沉思A(未解鎖): 回合結束時，獲得2點防禦",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "血色月光: 防禦上限+1，清理每3點防禦可抽1張牌"
+                               : "血色月光(未解鎖): 防禦上限+1，清理每3點防禦可抽1張牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "月下沉思B: 回合結束時，獲得2點防禦"
+                                : "月下沉思B(未解鎖): 回合結束時，獲得2點防禦",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "靈性本能: 防禦上限+1，每回合限1次，若防禦高於敵可推動他1格"
+                               : "靈性本能(未解鎖): 防禦上限+1，每回合限1次，若防禦高於敵可推動他1格",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "月下沉思C: 回合結束時，獲得2點防禦"
+                                : "月下沉思C(未解鎖): 回合結束時，獲得2點防禦",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 6: // 美人魚
+            DrawTextEx(font, "- 操控觸手進行遠距打擊", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "暴風之蝕: 對手在觸手上時，可無視距離發動攻擊行動(基本牌)"
+                               : "暴風之蝕(未解鎖): 對手在觸手上時，可無視距離發動攻擊行動(基本牌)",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "暗潮湧動A(已生效): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果"
+                                : "暗潮湧動A(未解鎖): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "神秘共鳴: 位於觸手上時，對手對你造成的傷害-1"
+                               : "神秘共鳴(未解鎖): 位於觸手上時，對手對你造成的傷害-1",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "暗潮湧動B(已生效): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果"
+                                : "暗潮湧動B(未解鎖): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "海的女兒: 移動後可將一個觸手向任意位置移動x/2格(向下取整)"
+                               : "海的女兒(未解鎖): 移動後可將一個觸手向任意位置移動x/2格(向下取整)",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "暗潮湧動C(已生效): 獲得一個觸手放在任意位置，若遠古甦醒生效則放腳下並移除此效果"
+                                : "暗潮湧動C(未解鎖): 獲得一個觸手任意位置，若遠古甦醒生效則放腳下並移除此效果",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 7: // 火柴女孩
+            DrawTextEx(font, "- 操控火柴改變戰局", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "痛苦的儀式: 攻擊技能或行動時，可將對手棄牌1張放回火柴牌庫，傷害+2"
+                               : "痛苦的儀式(未解鎖): 攻擊技能或行動時，可將對手棄牌1張放回火柴牌庫，傷害+2",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "火焰的捉弄: 對手用火柴牌時，你+1能量，火柴牌不能作為攻擊"
+                                : "火焰的捉弄(未解鎖): 對手用火柴牌時，你+1能量，火柴牌不能作為攻擊",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "放縱的渴望: 使用防禦技能時，可回收對手棄牌1張火柴並抽1牌"
+                               : "放縱的渴望(未解鎖): 使用防禦技能時，可回收對手棄牌1張火柴並抽1牌",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "欲望的捉弄: 對手用火柴牌時，你+1能量，火柴牌不能作為防禦"
+                                : "欲望的捉弄(未解鎖): 對手用火柴牌時，你+1能量，火柴牌不能作為防禦",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "魔鬼的凝視: 承受傷害失血時，可回收對手棄牌1張火柴並移動1格"
+                               : "魔鬼的凝視(未解鎖): 承受傷害失血時，可回收對手棄牌1張火柴並移動1格",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "命運的捉弄: 對手用火柴牌時，你+1能量，火柴牌不能作為移動"
+                                : "命運的捉弄(未解鎖): 對手用火柴牌時，你+1能量，火柴牌不能作為移動",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 8: // 桃樂絲
+            DrawTextEx(font, "- 高速連擊獲得 token", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "殺戮指令: 若連續攻擊傷害遞增，完成連擊並獲得1連擊token"
+                               : "殺戮指令(未解鎖): 若連續攻擊傷害遞增，完成連擊並獲得1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "無所遁形A: 每完成1次連擊，額外+1連擊token"
+                                : "無所遁形A(未解鎖): 每完成1次連擊，額外+1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "超越機器: 若後者技能等級大於前者，完成連擊並獲得1連擊token"
+                               : "超越機器(未解鎖): 若後者技能等級大於前者，完成連擊並獲得1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "無所遁形B: 每完成1次連擊，額外+1連擊token"
+                                : "無所遁形B(未解鎖): 每完成1次連擊，額外+1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "獲准極刑: 使用任一技能後，可棄移動牌使對手被移動x格"
+                               : "獲准極刑(未解鎖): 使用任一技能後，可棄移動牌使對手被移動x格",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "無所遁形C: 每完成1次連擊，額外+1連擊token"
+                                : "無所遁形C(未解鎖): 每完成1次連擊，額外+1連擊token",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+        case 9: // 山魯佐德
+            DrawTextEx(font, "- 操弄命運與藍色token", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+
+            // 🟥 攻擊被動
+            DrawTextEx(font, "攻擊被動", (Vector2){x, y}, 20, 1, RED); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_atk_lv2 ? "命運之手: 攻擊造成3點以上傷害時，可將1枚藍色token翻為紅色"
+                               : "命運之手(未解鎖): 攻擊造成3點以上傷害時，可將1枚藍色token翻為紅色",
+                (Vector2){x, y}, 20, 1, unlock_atk_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_atk_cache ? "童話編織者A: 獲得1枚藍色token並放置至任一對手供應排庫上"
+                                : "童話編織者A(未解鎖): 獲得1枚藍色token並放置至任一對手供應牌庫上",
+                (Vector2){x, y}, 20, 1, unlock_atk_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_atk_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的攻擊技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟩 防禦被動
+            y += 12;
+            DrawTextEx(font, "防禦被動", (Vector2){x, y}, 20, 1, GREEN); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_def_lv2 ? "改寫欲望: 對手購牌時，該牌庫每有1枚token就失去1點生命"
+                               : "改寫欲望(未解鎖): 對手購牌時，該牌庫每有1枚token就失去1點生命",
+                (Vector2){x, y}, 20, 1, unlock_def_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_def_cache ? "童話編織者B: 獲得1枚藍色token並放置至任一對手供應排庫上"
+                                : "童話編織者B(未解鎖): 獲得1枚藍色token並放置至任一對手供應牌庫上",
+                (Vector2){x, y}, 20, 1, unlock_def_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_def_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的防禦技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            // 🟪 移動被動
+            y += 12;
+            DrawTextEx(font, "移動被動", (Vector2){x, y}, 20, 1, PURPLE); y += line_gap;
+
+            DrawTextEx(font,
+                unlock_mov_lv2 ? "重組思想: 對手抽牌前展示其牌庫頂2張，有命運token則損血並棄該牌"
+                               : "重組思想(未解鎖): 對手抽牌前展示其牌庫頂2張，有命運token則損血並棄該牌",
+                (Vector2){x, y}, 20, 1, unlock_mov_lv2 ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_lv2) {
+                DrawTextEx(font, "解鎖條件: 購買兩張技能2的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+
+            DrawTextEx(font,
+                unlock_mov_cache ? "童話編織者C: 獲得1枚藍色token並放置至任一對手供應排庫上"
+                                : "童話編織者C(未解鎖): 獲得1枚藍色token並放置至任一對手供應牌庫上",
+                (Vector2){x, y}, 20, 1, unlock_mov_cache ? YELLOW : GRAY); y += line_gap;
+            if (!unlock_mov_cache) {
+                DrawTextEx(font, "解鎖條件: 購買三張等級3的移動技能牌", (Vector2){x + 20, y}, 18, 1, GRAY); y += line_gap;
+            }
+            break;
+
+
+        // 其他角色依需求增加
+        default:
+            DrawTextEx(font, "- 無資料", (Vector2){ 120, 140 }, 24, 1, SKYBLUE);
+            break;
+    }
+
+    Rectangle back_btn = { GetScreenWidth() - 180.0f, GetScreenHeight() - 70.0f, 160, 50 };
+    bool hover = CheckCollisionPointRec(GetMousePosition(), back_btn);
+    DrawRectangleRec(back_btn, hover ? ORANGE : DARKGRAY);
+    DrawTextEx(font, "返回", (Vector2){ back_btn.x + 50, back_btn.y + 15 }, 20, 1, WHITE);
+
+    if (hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        Game* g = (Game*)game;
+        g->current_state = GAME_STATE_HUMAN_TURN;
+    }
+}
+
+void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool isSelected) {
+    // 🎀 粉紅主題配色
+    Color borderColor = WHITE;
+    Color fillColor   = isSelected ? RED :
+                        (isHovered ? MAGENTA : PINK);
+    Color textColor   = WHITE;
+
+    // 底色 + 邊框
+    DrawRectangleRounded(bounds, 0.3f, 6, fillColor);
+    DrawRectangleRoundedLines(bounds, 0.3f, 6, borderColor);
+
+    // 文字置中
+    Vector2 textSize = MeasureTextEx(font, text, 20, 1);
+    DrawTextEx(font, text,
+        (Vector2){
+            bounds.x + (bounds.width  - textSize.x) / 2,
+            bounds.y + (bounds.height - textSize.y) / 2
+        },
+        20, 1, textColor);
+}
+

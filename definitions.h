@@ -8,6 +8,8 @@
 #define CARD_WIDTH 120
 #define CARD_HEIGHT 170
 
+
+
 // Card and Character types that all files need to know about
 typedef enum { ATTACK, DEFENSE, MOVE, GENERIC, SKILL, STATUS } CardType;
 
