@@ -44,6 +44,8 @@ typedef struct Game {
 
     int8_t pending_retaliation_level[2];
 
+    int thorns_attacks_left[2];
+    int thorns_damage_bonus[2];
 
     // [新] 新增一個變數來記錄當前的商店頁面 (0: 基礎牌, 1: 技能牌)
     int shop_page;

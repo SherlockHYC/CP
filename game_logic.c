@@ -29,6 +29,9 @@ void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
 
+    game->thorns_attacks_left[player_id] = 0;
+    game->thorns_damage_bonus[player_id] = 0;
+
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         int32_t card_id = p->hand.array[i];
         const Card* card = get_card_info(card_id);
@@ -632,6 +635,11 @@ void InitGame(Game* game) {
     game->pending_retaliation_level[0] = 0;
     game->pending_retaliation_level[1] = 0;
 
+    game->thorns_attacks_left[0] = 0;
+    game->thorns_attacks_left[1] = 0;
+    game->thorns_damage_bonus[0] = 0;
+    game->thorns_damage_bonus[1] = 0;
+
     for (int i = 0; i < 10; ++i) {
         for (int j = 0; j < 3; ++j) {
             game->shop_skill_piles[i][j] = initVector();
@@ -750,6 +758,12 @@ void apply_card_effect(Game* game, int card_hand_index) {
         int range = 1; // 攻擊基礎牌射程為 1
 
         if (distance <= range) {
+            int final_damage = card->value;
+            if (attacker->character == SLEEPING_BEAUTY && game->thorns_attacks_left[player_id] > 0) {
+                final_damage += game->thorns_damage_bonus[player_id];
+                game->thorns_attacks_left[player_id]--;
+                game->message = TextFormat("Thorns bonus! +%d damage", game->thorns_damage_bonus[player_id]);
+            }
             // 在射程內，造成傷害
             apply_damage(attacker, defender, card->value);
         } else {
@@ -967,11 +981,27 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             game->current_state = GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST;
             game->message = "選擇要消耗多少生命值以造成額外傷害";
             return; // 立即返回，等待玩家選擇
+        }else if (skill_card->id % 10 == 2) { // 睡美人防禦技能
+            int bonus_level = skill_card->level;
+            int num_attacks = basic_card->value;
+
+            // 設定效果狀態
+            game->thorns_attacks_left[player_id] = num_attacks;
+            game->thorns_damage_bonus[player_id] = bonus_level;
+
+            game->message = TextFormat("Gained Thorns! Next %d attacks deal +%d damage.", num_attacks, bonus_level);
+            // 此技能不造成傷害，只設置buff，然後會落到下面的通用棄牌邏輯
         }
     }
     else {
         // 其他角色或技能的通用邏輯
         if (skill_card->value > 0) {
+            int total_damage = skill_card->value;
+            // [修正] 只有當攻擊者是睡美人時，才應用荊棘加成
+            if (attacker->character == SLEEPING_BEAUTY && game->thorns_attacks_left[player_id] > 0) {
+                total_damage += game->thorns_damage_bonus[player_id];
+                game->thorns_attacks_left[player_id]--;
+            }
             apply_damage(attacker, defender, skill_card->value);
         }
         game->message = TextFormat("Used %s!", skill_card->name);
@@ -1119,6 +1149,11 @@ void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost) {
 
     // 5. 計算對敵人的總傷害
     int total_damage = base_damage + extra_damage;
+
+    if (game->thorns_attacks_left[player_id] > 0) {
+        total_damage += game->thorns_damage_bonus[player_id];
+        game->thorns_attacks_left[player_id]--;
+    }
 
     // 6. 對敵人造成總傷害
     apply_damage(attacker, defender, total_damage);
