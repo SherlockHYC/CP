@@ -2,6 +2,7 @@
 #include "definitions.h"
 #include "raylib.h"
 #include "database.h"
+#include <stdbool.h>
 #define ULTRA_CARD_WIDTH  140*1.2
 #define ULTRA_CARD_HEIGHT 200*1.2
 
@@ -9,6 +10,9 @@
 extern const char* character_names[];
 extern Font font;
 extern Texture2D backgroundTexture;
+
+//能否打開必殺欄位
+bool can_use_ultra1 = false;
 
 // 函式原型
 void DrawShop(const Game* game);
@@ -40,15 +44,15 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
     DrawRectangleRounded(bounds, 0.08f, 10, RAYWHITE);
     DrawRectangleRoundedLinesEx(bounds, 0.08f, 10, is_hovered ? 5 : 3, is_hovered ? GOLD : BLACK);
     if (card) {
-        DrawTextEx(font, card->name, (Vector2){ bounds.x + 10, bounds.y + 15 }, 18, 1, BLACK);
+        DrawTextEx(font, card->name, (Vector2){ bounds.x + 5 , bounds.y + 15 }, 18, 1, BLACK);
         
         // --- 卡牌類型標籤 ---
         if (card->type == ATTACK) {
-            DrawTextEx(font, TextFormat("Attack: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, RED);
+            DrawTextEx(font, TextFormat("Attack: %d", card->value), (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, RED);
         } else if (card->type == DEFENSE) {
-            DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, DARKGREEN);
+            DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, DARKGREEN);
         } else if (card->type == MOVE) {
-            DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, PURPLE);
+            DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, PURPLE);
         } else if (card->type == SKILL) {
             int subtype = card->id % 10;
 
@@ -65,13 +69,13 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
                 case 3: skill_type_text = TextFormat("[MOV] Skill%d", level); break;
             }
 
-            DrawTextEx(font, skill_type_text, (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, BLUE);
+            DrawTextEx(font, skill_type_text, (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, BLUE);
         }
 
         
         // --- 能量獲取標籤 ---
         if (card->type == ATTACK || card->type == DEFENSE || card->type == MOVE || card->type == GENERIC) {
-             DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
+             DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 5, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
         }
 
         // --- 顯示卡片 cost ---
@@ -655,14 +659,52 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
         bool ultra_hover = CheckCollisionPointRec(GetMousePosition(), ultra_btn);
         bool ultra_click = ultra_hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
-        // 使用粉紅主題的 DrawPassiveButton 函式畫 U 鍵
-        DrawPassiveButton(ultra_btn, "U", ultra_hover, game->current_state == GAME_STATE_ULTRA);
+        // 取得目前玩家
+        int player_id = game->inner_game.now_turn_player_id;
+        const player* p = &game->inner_game.players[player_id];
 
-        // 點擊後切換狀態
-        if (ultra_click) {
-            ((Game*)game)->current_state = GAME_STATE_ULTRA;
-        }    
-    
+        // 即時檢查生命是否低於觸發閥值
+        bool can_use_ultra = (p->life <= p->specialGate);
+        if(can_use_ultra) can_use_ultra1 = true;
+
+        //can_use_ultra1 = true;
+        // 使用粉紅主題的 DrawPassiveButton 畫 U 鍵（亮起或灰色）
+        DrawPassiveButton(ultra_btn, "U", ultra_hover, can_use_ultra1 && game->current_state == GAME_STATE_ULTRA);
+
+        // 畫鎖頭提示
+        if (!can_use_ultra1) {
+            // 計算中心點位置
+            int fontSize = 20;
+            Vector2 lockSize = MeasureTextEx(font, " X ", fontSize+40, 1);
+            DrawTextEx(font, " X ",
+                (Vector2){
+                    (ultra_btn.x + (ultra_btn.width  - lockSize.x) / 2) +6,
+                    (ultra_btn.y + (ultra_btn.height - lockSize.y) / 2) +5
+                },
+                fontSize+30, 1, BLACK);
+        }
+
+        // 👉 畫黃色圓圈 + 黑色文字（必殺閾值）
+        int radius = 14;
+        int centerX = ultra_btn.x + ultra_btn.width + 20;
+        int centerY = ultra_btn.y + ultra_btn.height / 2;
+
+        // 畫圓形
+        DrawCircle(centerX, centerY, radius, YELLOW);
+
+        // 畫數字（黑色，置中）
+        char threshold_text[8];
+        sprintf(threshold_text, "%d", p->specialGate);
+
+        int fontSize = 16;
+        int textWidth = MeasureText(threshold_text, fontSize);
+        DrawText(threshold_text, centerX - textWidth / 2, centerY - fontSize / 2, fontSize, BLACK);
+
+        // 點擊後切換狀態（只有能用時才有效）
+        if (ultra_click && can_use_ultra1) {
+            ((Game*)game)->current_state = GAME_STATE_ULTRA;     // ✅ 保留轉型
+        }
+            
     
     }
 
@@ -856,23 +898,34 @@ void DrawGameBoard(const Game* game) {
     }
 }
 
+#define HAND_SCALE 0.8f  // 玩家手牌縮放比例
+#define CARD_SCALE 0.8f
 void DrawBattleInterface(const Game* game) {
     const player* human = &game->inner_game.players[0];
     const player* bot = &game->inner_game.players[1];
     int distance = abs(human->locate[0] - bot->locate[0]);
 
-    int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
+    int scaled_card_width = CARD_WIDTH * HAND_SCALE;
+    int scaled_card_height = CARD_HEIGHT * HAND_SCALE;
+    int spacing = 15 * HAND_SCALE;
+
+    int hand_width = human->hand.SIZE * (scaled_card_width + spacing) - spacing;
     float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
-    float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
-    
+    float hand_y = GetScreenHeight() - scaled_card_height - 20;
+
     // 繪製玩家手牌
     for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-        Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
+        Rectangle card_bounds = {
+            hand_start_x + i * (scaled_card_width + spacing),
+            hand_y,
+            scaled_card_width,
+            scaled_card_height
+        };
+
         bool is_hovered = (game->current_state != GAME_STATE_PASSIVE_INFO) &&
                         CheckCollisionPointRec(GetMousePosition(), card_bounds);
         const Card* card_info = get_card_info(human->hand.array[i]);
-        
-        // 繪製基礎卡牌
+
         DrawCard(card_info, card_bounds, is_hovered, false);
 
         // [修改] 檢查可玩性並在需要時繪製遮罩
