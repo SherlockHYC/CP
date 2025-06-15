@@ -11,6 +11,12 @@
 Music otherBGMs[OTHER_BGM_COUNT];
 int currentOtherBGMIndex = -1;
 
+typedef enum {
+    MODE_PVB, 
+    MODE_PVP
+} AppMode;
+
+
 // Global variables
 Font font;
 Texture2D backgroundTexture;
@@ -18,17 +24,10 @@ Texture2D character_images[10];
 Music dorothyBGM;
 Texture2D screamImages[3];
 
-typedef enum {
-    MODE_PVB, // 玩家對戰電腦 (Player vs Bot)
-    MODE_PVP  // 玩家對戰玩家 (Player vs Player)
-} AppMode;
-
 void show_help();
 
-int main(int argc, char *argv[])
-{
-
-    AppMode selected_mode = MODE_PVB;
+int main(int argc, char *argv[]) {
+    AppMode selected_mode = MODE_PVB; 
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--help") == 0) {
@@ -43,7 +42,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    // --- Window Initialization ---
     const int screenWidth = 1280;
     const int screenHeight = 800;
     InitWindow(screenWidth, screenHeight, "Twisted Fables - GUI Edition");
@@ -66,63 +64,25 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // ✅ 在這裡載入中文點陣字型（建議放在 assets/fonts）
-    // 分配足夠空間來存放中英文 + 數字 + 標點（20902 + 26*2 + 10 + 標點）
+    // Load resources (font, textures, etc.)
     int total = 20902 + 26 + 26 + 10 + 8 + 17;
     int *codepoints = malloc(sizeof(int) * total);
     int idx = 0;
-
-    // 英文大寫 A-Z
     for (int i = 0x41; i <= 0x5A; ++i) codepoints[idx++] = i;
-
-    // 英文小寫 a-z
     for (int i = 0x61; i <= 0x7A; ++i) codepoints[idx++] = i;
-
-    // 數字 0-9
     for (int i = 0x30; i <= 0x39; ++i) codepoints[idx++] = i;
-
-    // 基本標點（空格、冒號、句號、驚嘆號）
-    codepoints[idx++] = 0x20; // space
-    codepoints[idx++] = 0x3A; // :
-    codepoints[idx++] = 0x2E; // .
-    codepoints[idx++] = 0x21; // !
-    codepoints[idx++] = 0x2B; // +
-    codepoints[idx++] = 0x2D; // -
-    codepoints[idx++] = 0x5B; // [
-    codepoints[idx++] = 0x5D; // ]
-    codepoints[idx++] = 0x28; // (
-    codepoints[idx++] = 0x29; // )
-    codepoints[idx++] = 0xFF0C; // ，
-    codepoints[idx++] = 0x2F; // / 
-    codepoints[idx++] = 0x22; // "
-    codepoints[idx++] = 0x3C; // <
-    codepoints[idx++] = 0x3E; // >
-    codepoints[idx++] = 0x2C; // , 半形逗號 ✅
-    codepoints[idx++] = 0x2264; // ≤ 小於等於符號
-    codepoints[idx++] = 0x2265; // ≥ 大於等於符號
-    codepoints[idx++] = 0x3D; // = 等號 ✅
-    codepoints[idx++] = 0x2264; // ≤
-    codepoints[idx++] = 0x2265; // ≥
-    codepoints[idx++] = 0x2192; // → 右箭頭符號
-    codepoints[idx++] = 0x3001; // 、頓號 ✅
-    codepoints[idx++] = 0x3F;   // 半形問號 ?
-    codepoints[idx++] = 0xFF1F; // 全形問號 ？
-
-    // 中文區段：0x4E00 ~ 0x9FFF
-    for (int i = 0; i < 20902; ++i)
-        codepoints[idx++] = 0x4E00 + i;
-
-    // ✅ 載入字體
+    codepoints[idx++] = 0x20; codepoints[idx++] = 0x3A; codepoints[idx++] = 0x2E; codepoints[idx++] = 0x21;
+    codepoints[idx++] = 0x2B; codepoints[idx++] = 0x2D; codepoints[idx++] = 0x5B; codepoints[idx++] = 0x5D;
+    codepoints[idx++] = 0x28; codepoints[idx++] = 0x29; codepoints[idx++] = 0xFF0C; codepoints[idx++] = 0x2F;
+    codepoints[idx++] = 0x22; codepoints[idx++] = 0x3C; codepoints[idx++] = 0x3E; codepoints[idx++] = 0x2C;
+    codepoints[idx++] = 0x2264; codepoints[idx++] = 0x2265; codepoints[idx++] = 0x3D; codepoints[idx++] = 0x2264;
+    codepoints[idx++] = 0x2265; codepoints[idx++] = 0x2192; codepoints[idx++] = 0x3001; codepoints[idx++] = 0x3F;
+    codepoints[idx++] = 0xFF1F;
+    for (int i = 0; i < 20902; ++i) codepoints[idx++] = 0x4E00 + i;
     font = LoadFontEx("assets/fonts/Cubic_11.ttf", 32, codepoints, total);
     SetTextureFilter(font.texture, TEXTURE_FILTER_POINT);
-
-    // ❗完成後釋放記憶體（避免記憶體洩漏）
     free(codepoints);
 
-
-    //font = LoadFont("assets/fonts/Cubic_11.ttf");
-    //font = LoadFont("assets/fonts/NotoSansTC-Black.ttf");
-    //font = GetFontDefault();
     backgroundTexture = LoadTexture("background.png");
 
 
@@ -141,12 +101,8 @@ int main(int argc, char *argv[])
     character_images[8] = LoadTexture("assets/dorothy.png");
     character_images[9] = LoadTexture("assets/scheherazade.png");
 
-
-    
     SetTargetFPS(60);
 
-    // --- [FIX] Allocate Game struct on the heap to prevent stack smashing ---
-if (selected_mode == MODE_PVB) {
     Game *game = malloc(sizeof(Game));
     if (game == NULL) {
         printf("FATAL ERROR: Failed to allocate memory for the game.\n");
@@ -154,98 +110,82 @@ if (selected_mode == MODE_PVB) {
         return 1;
     }
     
+
     InitGame(game);
+
+    if (selected_mode == MODE_PVP) {
+        game->current_state = GAME_STATE_PVP_CHOOSE_CHAR_P1;
+    }
 
     bool should_exit = false;
 
     while (!should_exit && !WindowShouldClose()) {
-        UpdateGame(game, &should_exit);
-        BeginDrawing();
-        ClearBackground(DARKGRAY);
-        DrawGame(game, character_images);
-        EndDrawing();
+        if (selected_mode == MODE_PVB) {
+            UpdateGame(game, &should_exit);
 
-        CharacterType ch = game->inner_game.players[0].character;
+            BeginDrawing();
+            ClearBackground(DARKGRAY);
+            DrawGame(game, character_images);
+            EndDrawing();
 
-        if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
-            if (IsMusicStreamPlaying(dorothyBGM)) StopMusicStream(dorothyBGM);
-            if (currentOtherBGMIndex != -1 && IsMusicStreamPlaying(otherBGMs[currentOtherBGMIndex])) {
-                StopMusicStream(otherBGMs[currentOtherBGMIndex]);
-                currentOtherBGMIndex = -1;
+            CharacterType ch = game->inner_game.players[0].character;
+
+            if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
+                if (IsMusicStreamPlaying(dorothyBGM)) StopMusicStream(dorothyBGM);
+                if (currentOtherBGMIndex != -1 && IsMusicStreamPlaying(otherBGMs[currentOtherBGMIndex])) {
+                    StopMusicStream(otherBGMs[currentOtherBGMIndex]);
+                    currentOtherBGMIndex = -1;
+                }
+            } else if (ch == DOROTHY) {
+                if (!IsMusicStreamPlaying(dorothyBGM)) {
+                    PlayMusicStream(dorothyBGM);
+                }
+                UpdateMusicStream(dorothyBGM);
+            } else {
+                if (currentOtherBGMIndex == -1 || !IsMusicStreamPlaying(otherBGMs[currentOtherBGMIndex])) {
+                    currentOtherBGMIndex = rand() % OTHER_BGM_COUNT;
+                    PlayMusicStream(otherBGMs[currentOtherBGMIndex]);
+                }
+                UpdateMusicStream(otherBGMs[currentOtherBGMIndex]);
             }
-        } else if (ch == DOROTHY) {
-            if (!IsMusicStreamPlaying(dorothyBGM)) {
-                PlayMusicStream(dorothyBGM);
-            }
+
             UpdateMusicStream(dorothyBGM);
         } else {
-            if (currentOtherBGMIndex == -1 || !IsMusicStreamPlaying(otherBGMs[currentOtherBGMIndex])) {
-                currentOtherBGMIndex = rand() % OTHER_BGM_COUNT;
-                PlayMusicStream(otherBGMs[currentOtherBGMIndex]);
-            }
-            UpdateMusicStream(otherBGMs[currentOtherBGMIndex]);
+            UpdatePVPGame(game, &should_exit);
+
+            BeginDrawing();
+            ClearBackground(DARKGRAY);
+            DrawGame(game, character_images);
+            EndDrawing();
         }
-
-        UpdateMusicStream(dorothyBGM);
+    }
+        
+    // --- [修正] 正確的清理邏輯 ---
+    // 無論是 PVP 還是 PVB，遊戲結束時都需要釋放資源
+    // 首先清理基礎商店牌庫
+    for (int p_idx = 0; p_idx < 2; ++p_idx) { // 遍歷兩位玩家的商店
+        for (int type = 0; type < 3; ++type) {
+            for (int lvl = 0; lvl < 3; ++lvl) {
+                freeVector(&game->shop_piles[p_idx][type][lvl]);
+            }
+        }
     }
 
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 3; ++j)
-            freeVector(&game->shop_piles[i][j]);
-
-    for (int i = 0; i < 10; ++i)
-        for (int j = 0; j < 3; ++j)
+    // 接著清理技能商店牌庫
+    for (int i = 0; i < 10; ++i) {
+        for (int j = 0; j < 3; ++j) {
             freeVector(&game->shop_skill_piles[i][j]);
-
-    UnloadMusicStream(dorothyBGM);
-    for (int i = 0; i < OTHER_BGM_COUNT; ++i) {
-        UnloadMusicStream(otherBGMs[i]);
+        }
     }
-    CloseAudioDevice();
+    // ------------------------------------
 
-    free(game);
-    
-} else if (selected_mode == MODE_PVP) {
-    Game *game = malloc(sizeof(Game));
-    if (game == NULL) {
-        printf("FATAL ERROR: Failed to allocate memory for the game.\n");
-        CloseWindow();
-        return 1;
-    }
-
-    InitGame(game);
-    game->current_state = GAME_STATE_PVP_CHOOSE_CHAR_P1;
-
-    bool should_exit = false;
-
-    while (!should_exit && !WindowShouldClose()) {
-        UpdatePVPGame(game, &should_exit);
-        BeginDrawing();
-        ClearBackground(DARKGRAY);
-        DrawGame(game, character_images);
-        EndDrawing();
-    }
-
-    for (int i = 0; i < 3; ++i)
-        UnloadTexture(screamImages[i]);
-
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 3; ++j)
-            freeVector(&game->shop_piles[i][j]);
-
-    for (int i = 0; i < 10; ++i)
-        for (int j = 0; j < 3; ++j)
-            freeVector(&game->shop_skill_piles[i][j]);
-
-    free(game);
-}
+    free(game); 
     UnloadTexture(backgroundTexture);
     for(int i = 0; i < 10; i++) {
         UnloadTexture(character_images[i]);
     }
     UnloadFont(font);
     CloseWindow();
-
     
     return 0;
 }

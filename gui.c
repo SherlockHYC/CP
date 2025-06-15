@@ -1096,8 +1096,9 @@ void DrawFocusSelection(const Game* game) {
     DrawTextEx(font, "Focus: Remove a Card", (Vector2){ (float)GetScreenWidth()/2 - MeasureTextEx(font, "Focus: Remove a Card", 40, 2).x/2, 50 }, 40, 2, WHITE);
     DrawTextEx(font, "Select a card from your Hand or Graveyard to permanently remove it.", (Vector2){ (float)GetScreenWidth()/2 - MeasureTextEx(font, "Select a card from your Hand or Graveyard to permanently remove it.", 20, 1).x/2, 100 }, 20, 1, LIGHTGRAY);
     
-    const player* p = &game->inner_game.players[0];
-
+    // --- [修正] 獲取「當前回合玩家」的指標 ---
+    const player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
+    // --------------------------------------
     DrawTextEx(font, "Your Hand:", (Vector2){50, 150}, 24, 1, WHITE);
     for (uint32_t i = 0; i < p->hand.SIZE; i++) {
         Rectangle card_bounds = { 50 + i * (CARD_WIDTH + 15), 180, CARD_WIDTH, CARD_HEIGHT };
@@ -1144,17 +1145,23 @@ void DrawGame( Game* game, Texture2D character_images[10]) {
             DrawCharSelection(game, character_images);
             return;
         
-        case GAME_STATE_PLAYER_1_TURN:
-        case GAME_STATE_PLAYER_2_TURN:
-        case GAME_STATE_HUMAN_TURN: // [新增] 將 PVB 的玩家回合也交給 DrawBattleInterface
-            DrawBattleInterface(game, character_images);
-            break;
-
         case GAME_STATE_GAME_OVER:
             DrawGameOver(game); 
+            return; // 遊戲結束，直接返回
+
+        case GAME_STATE_SHOP:
+            DrawBattleInterface(game, character_images);
+            DrawShop(game);
             break;
 
-        default: // 其他狀態 (如 BOT_TURN, SHOP 等) 也使用 BattleInterface
+
+        case GAME_STATE_FOCUS_REMOVE:
+            DrawBattleInterface(game, character_images); // 先繪製背景的戰鬥介面
+            DrawFocusSelection(game);
+            break;
+        
+        // --- [修改] 將所有回合狀態都交給 DrawBattleInterface 處理 ---
+        default:
             DrawBattleInterface(game, character_images);
             break;
     }
@@ -1238,12 +1245,21 @@ void DrawGame( Game* game, Texture2D character_images[10]) {
 
 // [修改] DrawShop 函式，將技能牌分頁改為堆疊顯示相同卡牌
 void DrawShop(const Game* game) {
+    // --- [修正] 獲取「當前回合玩家」的 ID 和指標 ---
+    int current_player_id = game->inner_game.now_turn_player_id;
+    const player* p = &game->inner_game.players[current_player_id];
+    // ---------------------------------------------
+
+
     float screenWidth = GetScreenWidth();
     float screenHeight = GetScreenHeight();
     DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.85f));
     DrawTextEx(font, "Shop", (Vector2){screenWidth / 2 - MeasureTextEx(font, "Shop", 60, 2).x / 2, 40}, 60, 2, GOLD);
-    DrawTextEx(font, TextFormat("Your Energy: %d", game->inner_game.players[0].energy), (Vector2){40, 40}, 30, 1, WHITE);
     
+    // --- [修正] 顯示「當前回合玩家」的能量 ---
+    DrawTextEx(font, TextFormat("Your Energy: %d", p->energy), (Vector2){40, 40}, 30, 1, WHITE);
+    // -----------------------------------------    
+
     // --- 繪製頁籤按鈕 ---
     Rectangle basic_tab = { screenWidth / 2.0f - 210, 150, 200, 40 };
     Rectangle skill_tab = { screenWidth / 2.0f + 10, 150, 200, 40 };
@@ -1279,7 +1295,9 @@ void DrawShop(const Game* game) {
             float card_start_y = row_center_y - (CARD_HEIGHT / 2.0f);
 
             for (int level = 0; level < 3; level++) {
-                const vector* pile = &game->shop_piles[type][level];
+                // --- [修正] 從「當前玩家」的商店牌庫中讀取資料 ---
+                const vector* pile = &game->shop_piles[current_player_id][type][level];
+                // -----------------------------------------------
                 if (pile->SIZE > 0) {
                     const Card* card = get_card_info(pile->array[0]);
                     if(card) {
@@ -1300,8 +1318,9 @@ void DrawShop(const Game* game) {
     if (game->shop_page == 1) {
         float offsetX = 200;  // 往右移動 200px
         float offsetY = 100;  // 往下移動 100px
-        int chara = game->inner_game.players[0].character;
-
+        // --- [修正] 使用「當前回合玩家」的角色 ID ---
+        int chara = p->character;
+        // ------------------------------------------
         if (chara >= 0 && chara < 10) {
             DrawTextEx(font, "攻擊技能", (Vector2){ 100 + offsetX, 110 + offsetY }, 22, 1, RED);
             DrawTextEx(font, "防禦技能", (Vector2){ 400 + offsetX, 110 + offsetY }, 22, 1, DARKGREEN);
