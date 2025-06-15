@@ -17,7 +17,7 @@ bool can_use_ultra1 = false;
 // 函式原型
 void DrawShop(const Game* game);
 void DrawFocusSelection(const Game* game);
-void DrawBattleInterface( Game* game);
+void DrawBattleInterface(Game* game, Texture2D character_images[10]);
 void DrawGameBoard(const Game* game);
 void DrawCharSelection(Texture2D character_images[10]);
 void DrawPlayerInfo(const Game* game, bool is_human);
@@ -640,7 +640,8 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
     int x_pos = is_human ? 30 : GetScreenWidth() - 330;
     int y_pos = is_human ? GetScreenHeight() - 110 : 30;
     
-    const char* role_name = character_names[p->character];
+    const char* role_name = (p->character == DOROTHY) ? "Doro" : character_names[p->character];
+
     
     Rectangle info_box = {(float)x_pos, (float)y_pos, 300, 80};
     DrawRectangleRec(info_box, Fade(BLACK, 0.7f));
@@ -910,7 +911,8 @@ void DrawGameBoard(const Game* game) {
 }
 
 
-void DrawBattleInterface( Game* game) {
+void DrawBattleInterface(Game* game, Texture2D character_images[10]) {
+
     const player* human = &game->inner_game.players[0];
     const player* bot = &game->inner_game.players[1];
     int distance = abs(human->locate[0] - bot->locate[0]);
@@ -1028,6 +1030,45 @@ void DrawBattleInterface( Game* game) {
     Vector2 message_size = MeasureTextEx(font, turn_text, 40, 2);
     DrawTextEx(font, turn_text, (Vector2){ (GetScreenWidth() - message_size.x)/2, GetScreenHeight() / 2.0f }, 40, 2, WHITE);
 
+
+    // 繪製角色頭像（左下角）
+    int ch = (int)game->inner_game.players[0].character;
+    if (ch >= 0 && ch < 10) {
+        Texture2D avatar = character_images[ch];
+
+        float max_w = 100;
+        float max_h = 100;
+
+        float img_w = avatar.width;
+        float img_h = avatar.height;
+
+        // ➤ 等比例縮放
+        float scale = fminf(max_w / img_w, max_h / img_h);
+        float draw_w = img_w * scale;
+        float draw_h = img_h * scale;
+
+        // ➤ 左下角位置
+        float x = 45;
+        float y = GetScreenHeight() - draw_h - 93;
+        if (ch == 4) {
+            y -= 18;  // 花木蘭往上移
+        } else if (ch == 8) {
+            scale *= 2.0f; // 桃樂絲放大
+            draw_w = img_w * scale;
+            draw_h = img_h * scale;
+            y -= 70; // 桃樂絲往上移（可再微調）
+            x -= 30;
+        }
+
+        DrawTexturePro(
+            avatar,
+            (Rectangle){ 0, 0, img_w, img_h },
+            (Rectangle){ x, y, draw_w, draw_h },
+            (Vector2){ 0, 0 },
+            0.0f,
+            WHITE
+        );
+    }
     //畫出小紅帽板載緩存按鈕 A
     // 檢查是否符合啟用條件
     if (game->inner_game.players[0].character == RED_HOOD||game->inner_game.players[1].character == RED_HOOD) {
@@ -1097,7 +1138,7 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
     DrawPlayerInfo(game, true);
     DrawPlayerInfo(game, false);
     if (game->current_state != GAME_STATE_SHOP && game->current_state != GAME_STATE_FOCUS_REMOVE) {
-        DrawBattleInterface(game);
+        DrawBattleInterface(game, character_images);
     }
 
     // [新] 繪製對局中的退出按鈕

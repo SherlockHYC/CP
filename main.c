@@ -4,11 +4,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h> // Required for malloc and free
+#include "definitions.h" 
+#include <time.h>  // 為了 srand 與 rand
+
+#define OTHER_BGM_COUNT 5
+Music otherBGMs[OTHER_BGM_COUNT];
+int currentOtherBGMIndex = -1;
 
 // Global variables
 Font font;
 Texture2D backgroundTexture;
 Texture2D character_images[10];
+Music dorothyBGM;
 
 
 void show_help();
@@ -26,6 +33,17 @@ int main(int argc, char *argv[])
     const int screenWidth = 1280;
     const int screenHeight = 800;
     InitWindow(screenWidth, screenHeight, "Twisted Fables - GUI Edition");
+
+    InitAudioDevice(); // 初始化音訊設備
+    dorothyBGM = LoadMusicStream("assets/njhsq-7qkal.ogg"); // 改成你的檔案路徑
+    otherBGMs[0] = LoadMusicStream("assets/ke5yr-inyej.ogg");
+    otherBGMs[1] = LoadMusicStream("assets/kj2rz-39yf5.ogg");
+    otherBGMs[2] = LoadMusicStream("assets/s3a3k-0acm5.ogg");
+    otherBGMs[3] = LoadMusicStream("assets/azan5-7pbco.ogg");
+    otherBGMs[4] = LoadMusicStream("assets/xv3pl-okfys.ogg");
+
+    // 初始化亂數種子
+    srand(time(NULL));
 
 
 
@@ -123,14 +141,41 @@ int main(int argc, char *argv[])
     // --- Game Loop ---
     while (!should_exit && !WindowShouldClose())
     {
-        // 1. Update game state (passing the pointer to the game struct)
         UpdateGame(game, &should_exit);
-        
-        // 2. Draw everything
+
         BeginDrawing();
         ClearBackground(DARKGRAY);
-        DrawGame(game, character_images); // Pass the pointer
+        DrawGame(game, character_images);
         EndDrawing();
+
+        CharacterType ch = game->inner_game.players[0].character;
+
+        // 若回到選角畫面，停止所有 BGM
+        if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
+            if (IsMusicStreamPlaying(dorothyBGM)) StopMusicStream(dorothyBGM);
+            if (currentOtherBGMIndex != -1 && IsMusicStreamPlaying(otherBGMs[currentOtherBGMIndex])) {
+                StopMusicStream(otherBGMs[currentOtherBGMIndex]);
+                currentOtherBGMIndex = -1;
+            }
+        }
+        // 桃樂絲播放專屬 BGM
+        else if (ch == DOROTHY) {
+            if (!IsMusicStreamPlaying(dorothyBGM)) {
+                PlayMusicStream(dorothyBGM);
+            }
+            UpdateMusicStream(dorothyBGM);
+        }
+        // 其他角色隨機播放 one of 5 BGM
+        else {
+            if (currentOtherBGMIndex == -1 || !IsMusicStreamPlaying(otherBGMs[currentOtherBGMIndex])) {
+                currentOtherBGMIndex = rand() % OTHER_BGM_COUNT;
+                PlayMusicStream(otherBGMs[currentOtherBGMIndex]);
+            }
+            UpdateMusicStream(otherBGMs[currentOtherBGMIndex]);
+        }
+
+        // ✅ 每幀更新音樂緩衝
+        UpdateMusicStream(dorothyBGM);
     }
 
     // --- Cleanup ---
@@ -141,6 +186,12 @@ int main(int argc, char *argv[])
     for (int i = 0; i < 10; ++i)
         for (int j = 0; j < 3; ++j)
             freeVector(&game->shop_skill_piles[i][j]);
+
+    UnloadMusicStream(dorothyBGM);
+    for (int i = 0; i < OTHER_BGM_COUNT; ++i) {
+        UnloadMusicStream(otherBGMs[i]);
+    }
+    CloseAudioDevice();
 
     free(game); // Free the allocated memory for the game struct
     UnloadTexture(backgroundTexture);
