@@ -951,6 +951,11 @@ void DrawBattleInterface(const Game* game) {
                         range = 1;
                         range_check_needed = true;
                     }
+                }else if (human->character == SLEEPING_BEAUTY) {
+                    if (skill_subtype == 1) { // 攻擊技能
+                        range = 1;
+                        range_check_needed = true;
+                    }
                 }
 
                 if (range_check_needed && distance > range) {

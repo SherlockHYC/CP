@@ -176,7 +176,12 @@ void UpdateGame(Game* game, bool* should_close) {
                                 range_check_needed = true;
                             }
                         }
-
+                        else if (human->character == SLEEPING_BEAUTY) {
+                            if (skill_subtype == 1) { // 攻擊技能
+                                range = 1; // 固定射程 1
+                                range_check_needed = true;
+                            }
+                        }
                         if (range_check_needed && distance > range) {
                             can_play = false;
                             game->message = "No target in range!";
@@ -980,7 +985,22 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
         }
         // (此處可擴充白雪公主的其他技能)
 
-    } else {
+    } else if(attacker->character == SLEEPING_BEAUTY && skill_card->type == SKILL) {
+        if (skill_card->id % 10 == 1) { // 睡美人攻擊技能
+            int multiplier = skill_card->level;
+            int base_value = basic_card->value;
+            int total_damage = multiplier * base_value;
+            
+            if(defender->defense >= total_damage) defender->defense -= total_damage;
+            else { 
+                int dmg_left = total_damage - defender->defense;
+                defender->defense = 0;
+                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
+            }
+            game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
+        }
+    }
+    else {
         // 其他角色或技能的通用邏輯
         if (skill_card->value > 0) {
             int damage = skill_card->value;
