@@ -23,58 +23,46 @@ void apply_poison_damage(player* p, const Card* card);
 
 bool ultra_unlocked[4] = {false};  // 預設全部鎖住
 
+void play_card(game* g, int player_id, int32_t card_id);
+
 
 
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
 
-    for (uint32_t i = 0; i < p->hand.SIZE; i++) {
+    // 1. 處理中毒狀態，並將所有手牌棄到墓地
+    for (uint32_t i = 0; i < p->hand.SIZE; ++i) {
         int32_t card_id = p->hand.array[i];
         const Card* card = get_card_info(card_id);
-
-        // (Notice) 檢查是否為中毒牌，若為是，只觸發傷害
         if (card && card->type == STATUS) {
             apply_poison_damage(p, card);
         }
-
-       
-
         pushbackVector(&p->graveyard, card_id);
-
-
     }
     clearVector(&p->hand);
-    
-    // 1. 當前回合玩家棄置所有手牌
-    for (uint32_t i = 0; i < p->hand.SIZE; i++) {
-        pushbackVector(&p->graveyard, p->hand.array[i]);
-    }
-    clearVector(&p->hand);
-    
-    // 2. 重置能量和防禦
+
+    // 2. 重置能量（防禦可視需求是否清除）
     p->energy = 0;
-    // p->defense = 0;
-    
-    // 3. [新防護機制] 計算總牌數並決定抽牌目標
-    // 此時手牌已空，總牌數等於牌庫 + 棄牌堆
-    uint32_t total_cards = p->deck.SIZE + p->graveyard.SIZE;
-    int target_hand_size = 6;
 
-    // 如果總牌數少於標準手牌上限，則只抽到總牌數的量
-    if (total_cards < 6) {
-        target_hand_size = total_cards;
-    }
-    
-    // 4. 為下個回合抽出新的手牌
-    while(p->hand.SIZE < (uint32_t)target_hand_size) {
+    // 3. 補牌至 6 張（若不足則從墓地洗回牌庫）
+    while (p->hand.SIZE < 6) {
+        if (p->deck.SIZE == 0 && p->graveyard.SIZE > 0) {
+            // 將墓地洗回牌庫
+            p->deck = p->graveyard;
+            p->graveyard = initVector();
+            shuffle_deck(&p->deck);
+        }
+
+        if (p->deck.SIZE == 0) break;  // 無牌可抽
         draw_card(p);
     }
-    
-    // 5. 交換玩家順序並開始新回合
+
+    // 4. 換下一位玩家
     game->inner_game.now_turn_player_id = (player_id + 1) % 2;
     start_turn(game);
 }
+
 
 void UpdateGame(Game* game, bool* should_close) {
     switch (game->current_state) {
@@ -96,7 +84,11 @@ void UpdateGame(Game* game, bool* should_close) {
                 };
                 if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     init_player_deck(&game->inner_game.players[0], (CharacterType)i);
-                    init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
+
+                    if(i == RED_HOOD) init_player_deck(&game->inner_game.players[1], (CharacterType)SNOW_WHITE);
+                    else init_player_deck(&game->inner_game.players[1], (CharacterType)RED_HOOD);
+
+                    // init_player_deck(&game->inner_game.players[1], (CharacterType)(rand() % 10));
                     initialize_shop_skill_piles(game);
 
                     game->inner_game.players[0].locate[0] = 6;
@@ -382,14 +374,24 @@ void UpdateGame(Game* game, bool* should_close) {
         case GAME_STATE_BOT_TURN: {
             game->bot_action_timer -= GetFrameTime();
             if (game->bot_action_timer <= 0) {
-                int card_to_play = get_bot_action(&game->inner_game);
-                if (card_to_play != -1) {
-                    // Bot AI currently does not support the new skill mechanic.
+                int bot_id = game->inner_game.now_turn_player_id;
+                player* bot = &game->inner_game.players[bot_id];
+                int card_idx = get_bot_action(&game->inner_game);
+                if (card_idx != -1) {
+                    // 出牌：取得實際卡片 ID 並呼叫 play_card
+                    int32_t card_id = bot->hand.array[card_idx];
+                    play_card(&game->inner_game, bot_id, card_id);
+
+                    // 等待下一張牌（避免出牌太快）
+                    game->bot_action_timer = 0.5f;
+                } else {
+                    // 沒牌可出就結束回合
+                    end_turn(game);
                 }
-                end_turn(game);
             }
             break;
         }
+
         case GAME_STATE_GAME_OVER: {
             Rectangle back_btn = { (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 + 40, 250, 50 };
             if (CheckCollisionPointRec(GetMousePosition(), back_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -704,11 +706,12 @@ void draw_card(player* p) {
         p->graveyard = initVector();
         shuffle_deck(&p->deck);
     }
-    if (p->hand.SIZE < 10) {
+    if (p->hand.SIZE < 10 && p->deck.SIZE > 0) {
         pushbackVector(&p->hand, p->deck.array[p->deck.SIZE - 1]);
         popbackVector(&p->deck);
     }
 }
+
 
 // apply_movement 函式 - 保持不變
 void apply_movement(Game* game, int direction) {
@@ -1205,3 +1208,69 @@ void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost) {
     game->pending_basic_card_index = -1;
     game->current_state = GAME_STATE_HUMAN_TURN;
 }
+void play_card(game* g, int player_id, int32_t card_id) {
+    player* p = &g->players[player_id];
+    const Card* card = get_card_info(card_id);
+    if (!card) return;
+
+    // 技能卡不消耗能量，其他卡才檢查能量
+    if (card->type != SKILL && card->cost > p->energy) return;
+    if (card->type != SKILL) {
+        p->energy -= card->cost;
+    }
+
+    // 技能卡需捨棄對應基本牌
+    if (card->type == SKILL) {
+        CardType required_type = GENERIC;
+        if (card->id == 501 || card->id == 511) required_type = ATTACK;
+        else if (card->id == 502 || card->id == 512) required_type = DEFENSE;
+        else if (card->id == 503 || card->id == 513) required_type = MOVE;
+
+        for (uint32_t i = 0; i < p->hand.SIZE; ++i) {
+            const Card* c = get_card_info(p->hand.array[i]);
+            if (c && c->type == required_type) {
+                pushbackVector(&p->graveyard, p->hand.array[i]);
+                eraseVector(&p->hand, i);
+                break;
+            }
+        }
+    }
+
+    // 執行卡片效果
+    if (card->type == ATTACK || (card->type == SKILL && (card->id == 501 || card->id == 511))) {
+        player* enemy = &g->players[(player_id + 1) % 2];
+        int damage = card->value;
+        if (enemy->defense > 0) {
+            if (enemy->defense >= damage) {
+                enemy->defense -= damage;
+                damage = 0;
+            } else {
+                damage -= enemy->defense;
+                enemy->defense = 0;
+            }
+        }
+        enemy->life -= damage;
+        if (enemy->life < 0) enemy->life = 0;
+    } else if (card->type == DEFENSE || (card->type == SKILL && (card->id == 502 || card->id == 512))) {
+        p->defense += card->value;
+    } else if (card->type == MOVE || (card->type == SKILL && (card->id == 503 || card->id == 513))) {
+        int me_pos = p->locate[0];
+        int enemy_pos = g->players[(player_id + 1) % 2].locate[0];
+        int dir = (me_pos < enemy_pos) ? 1 : -1;
+        int new_pos = me_pos + dir * card->value;
+        if (new_pos < 0) new_pos = 0;
+        if (new_pos > 10) new_pos = 10;
+        if (new_pos == enemy_pos) new_pos -= dir;
+        p->locate[0] = new_pos;
+    }
+
+    // 卡片進入棄牌堆
+    for (uint32_t i = 0; i < p->hand.SIZE; ++i) {
+        if (p->hand.array[i] == card_id) {
+            pushbackVector(&p->graveyard, card_id);
+            eraseVector(&p->hand, i);
+            break;
+        }
+    }
+}
+
