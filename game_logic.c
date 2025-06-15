@@ -418,6 +418,31 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
+        case GAME_STATE_SLEEPING_BEAUTY_CHOOSE_AWAKEN_COST:{
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            const player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
+            const Card* skill_card = get_card_info(p->hand.array[game->pending_skill_card_index]);
+            if (!skill_card) return;
+
+            int max_cost = (p->sleepingBeauty.AWAKEN == 1) ? skill_card->level : 0;
+            if (p->sleepingBeauty.AWAKEN_TOKEN < (uint32_t)max_cost) {
+                max_cost = p->sleepingBeauty.AWAKEN_TOKEN;
+            }
+
+            float button_width = 100, button_height = 50, padding = 10;
+            float total_width = (max_cost + 1) * (button_width + padding) - padding;
+            float start_x = (GetScreenWidth() - total_width) / 2.0f;
+            float button_y = GetScreenHeight() / 2.0f;
+
+            for (int i = 0; i <= max_cost; ++i) {
+                Rectangle button_bounds = {start_x + i * (button_width + padding), button_y, button_width, button_height};
+                if (CheckCollisionPointRec(GetMousePosition(), button_bounds)) {
+                    resolve_sleeping_beauty_defense(game, i);
+                    break;
+                }
+            }
+        }
+        }
 
         case GAME_STATE_ULTRA:
         // 可空白不做事
@@ -982,23 +1007,12 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             game->message = "選擇要消耗多少生命值以造成額外傷害";
             return; // 立即返回，等待玩家選擇
         }else if (skill_card->id % 10 == 2) { // 睡美人防禦技能
-            int bonus_level = skill_card->level;
-            int num_attacks = basic_card->value;
-
-            if (attacker->sleepingBeauty.AWAKEN == 1 && attacker->sleepingBeauty.AWAKEN_TOKEN >= (uint32_t)bonus_level) {
-                attacker->sleepingBeauty.AWAKEN_TOKEN -= bonus_level;
-                num_attacks += bonus_level;
-                game->message = TextFormat("Spent %d Awaken! Thorns enhanced!", bonus_level);
-            } else {
-                game->message = "Gained Thorns!";
-            }
-
-            // 設定效果狀態
-            game->thorns_attacks_left[player_id] = num_attacks;
-            game->thorns_damage_bonus[player_id] = bonus_level;
-
-            game->message = TextFormat("Gained Thorns! Next %d attacks deal +%d damage.", num_attacks, bonus_level);
-            // 此技能不造成傷害，只設置buff，然後會落到下面的通用棄牌邏輯
+            // 進入選擇覺醒消耗的狀態
+            game->pending_skill_card_index = skill_idx;
+            game->pending_basic_card_index = basic_idx;
+            game->current_state = GAME_STATE_SLEEPING_BEAUTY_CHOOSE_AWAKEN_COST;
+            game->message = "選擇要消耗多少覺醒值";
+            return; // 等待玩家選擇
         }
     }
     else {
@@ -1190,6 +1204,49 @@ void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost) {
     pushbackVector(&attacker->graveyard, basic_id);
 
     // 9. 重設狀態並返回玩家回合
+    game->player_has_acted = true;
+    game->pending_skill_card_index = -1;
+    game->pending_basic_card_index = -1;
+    game->current_state = GAME_STATE_HUMAN_TURN;
+}
+
+void resolve_sleeping_beauty_defense(Game* game, int chosen_awaken_cost) {
+    int player_id = game->inner_game.now_turn_player_id;
+    player* attacker = &game->inner_game.players[player_id];
+    
+    int skill_idx = game->pending_skill_card_index;
+    int basic_idx = game->pending_basic_card_index;
+
+    if (skill_idx < 0 || basic_idx < 0 || (uint32_t)skill_idx >= attacker->hand.SIZE || (uint32_t)basic_idx >= attacker->hand.SIZE) {
+        game->current_state = GAME_STATE_HUMAN_TURN; return;
+    }
+
+    const Card* skill_card = get_card_info(attacker->hand.array[skill_idx]);
+    const Card* basic_card = get_card_info(attacker->hand.array[basic_idx]);
+    if (!skill_card || !basic_card) { game->current_state = GAME_STATE_HUMAN_TURN; return; }
+
+    int bonus_level = skill_card->level;
+    int num_attacks = basic_card->value;
+    
+    // 消耗覺醒值並增加生效次數
+    if (chosen_awaken_cost > 0) {
+        attacker->sleepingBeauty.AWAKEN_TOKEN -= chosen_awaken_cost;
+        num_attacks += chosen_awaken_cost;
+        game->message = TextFormat("消耗%d覺醒值! 荊棘效果已強化!", chosen_awaken_cost);
+    } else {
+        game->message = "獲得荊棘效果!";
+    }
+    
+    game->thorns_attacks_left[player_id] = num_attacks;
+    game->thorns_damage_bonus[player_id] = bonus_level;
+
+    int32_t skill_id = skill_card->id;
+    int32_t basic_id = basic_card->id;
+    if (skill_idx > basic_idx) { eraseVector(&attacker->hand, skill_idx); eraseVector(&attacker->hand, basic_idx); } 
+    else { eraseVector(&attacker->hand, basic_idx); eraseVector(&attacker->hand, skill_idx); }
+    pushbackVector(&attacker->graveyard, skill_id);
+    pushbackVector(&attacker->graveyard, basic_id);
+
     game->player_has_acted = true;
     game->pending_skill_card_index = -1;
     game->pending_basic_card_index = -1;

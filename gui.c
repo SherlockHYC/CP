@@ -28,6 +28,7 @@ void DrawPassiveInfoOverlay(const Game* game);
 void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool isSelected);
 void DrawUltraOverlay(const Game* game); // ✅ 加這行
 void DrawSleepingBeautyHPChoiceOverlay(const Game* game);
+void DrawSleepingBeautyAwakenChoiceOverlay(const Game* game);
 
 
 // =================================================================
@@ -1116,11 +1117,17 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
             DrawTextEx(font, "Return to Menu", (Vector2){ back_btn.x + 50, back_btn.y + 15 }, 20, 1, WHITE);
             break;
         }
-        case GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST:
+        case GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST:{
             DrawSleepingBeautyHPChoiceOverlay(game);
             break;
+        }
         case GAME_STATE_ULTRA: {
             DrawUltraOverlay(game);
+            break;
+        }
+        case GAME_STATE_SLEEPING_BEAUTY_CHOOSE_AWAKEN_COST:{
+            DrawSleepingBeautyAwakenChoiceOverlay(game);
+            break;
         }
         
         
@@ -2279,4 +2286,34 @@ void DrawSleepingBeautyHPChoiceOverlay(const Game* game) {
     bool hover = CheckCollisionPointRec(GetMousePosition(), cancel_btn);
     DrawRectangleRec(cancel_btn, hover ? RED : MAROON);
     DrawTextEx(font, "取消", (Vector2){ cancel_btn.x + 30, cancel_btn.y + 10 }, 20, 1, WHITE);
+}
+
+void DrawSleepingBeautyAwakenChoiceOverlay(const Game* game) {
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+    const char* title = "選擇要消耗的覺醒值";
+    DrawTextEx(font, title, (Vector2){GetScreenWidth()/2.0f - MeasureTextEx(font, title, 32, 1).x/2, GetScreenHeight()/2.0f - 100}, 32, 1, WHITE);
+
+    const player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
+    const Card* skill_card = get_card_info(p->hand.array[game->pending_skill_card_index]);
+    if (!skill_card) return;
+
+    // 計算最大可消耗值
+    int max_cost = (p->sleepingBeauty.AWAKEN == 1) ? skill_card->level : 0;
+    if (p->sleepingBeauty.AWAKEN_TOKEN < (uint32_t)max_cost) {
+        max_cost = p->sleepingBeauty.AWAKEN_TOKEN;
+    }
+
+    float button_width = 100, button_height = 50, padding = 10;
+    float total_width = (max_cost + 1) * (button_width + padding) - padding;
+    float start_x = (GetScreenWidth() - total_width) / 2.0f;
+    float button_y = GetScreenHeight() / 2.0f;
+
+    for (int i = 0; i <= max_cost; ++i) {
+        Rectangle button_bounds = {start_x + i * (button_width + padding), button_y, button_width, button_height};
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), button_bounds);
+        DrawRectangleRec(button_bounds, hovered ? LIGHTGRAY : RAYWHITE);
+        DrawRectangleLinesEx(button_bounds, 2, hovered ? DARKGRAY : GRAY);
+        const char* text = TextFormat("%d", i);
+        DrawTextEx(font, text, (Vector2){button_bounds.x + button_width/2 - MeasureTextEx(font, text, 24, 1).x/2, button_bounds.y + button_height/2 - 12}, 24, 1, BLACK);
+    }
 }

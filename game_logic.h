@@ -24,7 +24,8 @@ typedef enum {
     GAME_STATE_BATTLE,
     GAME_STATE_ULTRA,
 
-    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST,
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_AWAKEN_COST
 } GameState;
 
 // Main Game Struct
@@ -54,6 +55,8 @@ typedef struct Game {
 // Function Prototypes
 void InitGame(Game* game);
 void UpdateGame(Game* game, bool *should_close); 
+void resolve_sleeping_beauty_defense(Game* game, int chosen_awaken_cost); // 新增函式原型
+
 
 int apply_damage(player* attacker, player* defender, int base_damage);
 
