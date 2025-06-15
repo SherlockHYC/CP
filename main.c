@@ -10,15 +10,28 @@ Font font;
 Texture2D backgroundTexture;
 Texture2D character_images[10];
 
+typedef enum {
+    MODE_PVB, // 玩家對戰電腦 (Player vs Bot)
+    MODE_PVP  // 玩家對戰玩家 (Player vs Player)
+} AppMode;
 
 void show_help();
 
 int main(int argc, char *argv[])
 {
-    if (argc > 1) {
-        if (strcmp(argv[1], "--help") == 0) {
+
+    AppMode selected_mode = MODE_PVB;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--help") == 0) {
             show_help();
             return 0;
+        }
+        if (strcmp(argv[i], "--pvp") == 0) {
+            selected_mode = MODE_PVP;
+        }
+        if (strcmp(argv[i], "--pvb") == 0) {
+            selected_mode = MODE_PVB;
         }
     }
 
@@ -109,41 +122,54 @@ int main(int argc, char *argv[])
     SetTargetFPS(60);
 
     // --- [FIX] Allocate Game struct on the heap to prevent stack smashing ---
-    Game *game = malloc(sizeof(Game));
-    if (game == NULL) {
-        printf("FATAL ERROR: Failed to allocate memory for the game.\n");
-        CloseWindow();
-        return 1;
-    }
-    
-    InitGame(game);
-
-    bool should_exit = false; 
-    
-    // --- Game Loop ---
-    while (!should_exit && !WindowShouldClose())
-    {
-        // 1. Update game state (passing the pointer to the game struct)
-        UpdateGame(game, &should_exit);
+    if (selected_mode == MODE_PVB) {
+        // --- 執行現有的 PVB 遊戲邏輯 ---
+        Game *game = malloc(sizeof(Game));
+        if (game == NULL) {
+            printf("FATAL ERROR: Failed to allocate memory for the game.\n");
+            CloseWindow();
+            return 1;
+        }
+        InitGame(game);
+        bool should_exit = false; 
         
-        // 2. Draw everything
-        BeginDrawing();
-        ClearBackground(DARKGRAY);
-        DrawGame(game, character_images); // Pass the pointer
-        EndDrawing();
+        while (!should_exit && !WindowShouldClose()) {
+            UpdateGame(game, &should_exit);
+            BeginDrawing();
+            ClearBackground(DARKGRAY);
+            DrawGame(game, character_images);
+            EndDrawing();
+        }
+
+        // Cleanup for PVB mode
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                freeVector(&game->shop_piles[i][j]);
+
+        for (int i = 0; i < 10; ++i)
+            for (int j = 0; j < 3; ++j)
+                freeVector(&game->shop_skill_piles[i][j]);
+
+        free(game);
+
+    } else if (selected_mode == MODE_PVP) {
+        // --- PVP 模式的預留位置 ---
+        while (!WindowShouldClose()) {
+            BeginDrawing();
+            ClearBackground(DARKGRAY);
+            DrawTexture(backgroundTexture, 0, 0, WHITE);
+            const char* message = "PVP 模式開發中...";
+            Vector2 text_size = MeasureTextEx(font, message, 50, 2);
+            DrawTextEx(font, message, (Vector2){(screenWidth - text_size.x)/2, (screenHeight - text_size.y)/2}, 50, 2, WHITE);
+            EndDrawing();
+        }
     }
 
     // --- Cleanup ---
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 3; ++j)
-            freeVector(&game->shop_piles[i][j]);
-
-    for (int i = 0; i < 10; ++i)
-        for (int j = 0; j < 3; ++j)
-            freeVector(&game->shop_skill_piles[i][j]);
-
-    free(game); // Free the allocated memory for the game struct
     UnloadTexture(backgroundTexture);
+    for(int i = 0; i < 10; i++) {
+        UnloadTexture(character_images[i]);
+    }
     UnloadFont(font);
     CloseWindow();
 
@@ -157,6 +183,8 @@ void show_help() {
     printf("A 1v1 card battler where the goal is to reduce your opponent's HP to 0.\n\n");
     printf("== HOW TO RUN ==\n");
     printf("  ./TwistedFablesGUI         : (Default) Starts the Player vs. Bot game.\n");
+    printf("  ./TwistedFablesGUI --pvb   : Starts the Player vs. Bot game.\n");
+    printf("  ./TwistedFablesGUI --pvp   : Starts the Player vs. Player mode.\n");
     printf("  ./TwistedFablesGUI --help  : Shows this help message.\n\n");
     printf("== HOW TO PLAY ==\n");
     printf("  1. Select your hero using the mouse.\n");
