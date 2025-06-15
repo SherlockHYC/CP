@@ -1629,7 +1629,7 @@ void play_card(game* g, int player_id, int32_t card_id) {
             }
         }
         enemy->life -= damage;
-        if (enemy->life < 0) enemy->life = 0;
+        
     } else if (card->type == DEFENSE || (card->type == SKILL && (card->id == 502 || card->id == 512))) {
         p->defense += card->value;
     } else if (card->type == MOVE || (card->type == SKILL && (card->id == 503 || card->id == 513))) {

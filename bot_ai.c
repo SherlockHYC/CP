@@ -35,7 +35,7 @@ CardType get_skill_sacrifice_type(int32_t skill_card_id) {
 int get_bot_action(const game* game_state) {
     // [BOT AI] 檢查目前是否已規劃好出牌計劃
     const player* me = &game_state->players[game_state->now_turn_player_id];
-    const player* enemy = &game_state->players[(game_state->now_turn_player_id + 1) % 2];
+    
 
     if (planned_index < planned_count) {
         int card_idx = planned_actions[planned_index++];
@@ -87,7 +87,7 @@ int get_bot_action(const game* game_state) {
             planned_actions[planned_count++] = skill_idx;
 
             // 移除犧牲牌（第一張即可）
-            for (int k = 0; k < pool->SIZE - 1; ++k) {
+            for (uint32_t k = 0; k + 1 < pool->SIZE; ++k) {
                 pool->array[k] = pool->array[k + 1];
             }
             pool->SIZE--;
