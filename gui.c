@@ -132,6 +132,7 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
 
         const char* line1 = "";
         const char* line2 = "";
+        const char* line3 = "";
 
         if (type == 1) {
             if (level == 1) line1 = "射程1, 傷害1+x";
@@ -140,15 +141,18 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
         } else if (type == 2) {
             if (level == 1) {
                 line1 = "射程1, 傷害1, 防禦x";
-                line2 = "防禦>0時對範圍1造成2傷害";
+                line2 = "回合開始時";                
+                line3 = "若防禦>0時對範圍1造成2傷害";
             }
             if (level == 2) {
                 line1 = "射程2, 傷害2, 防禦x";
-                line2 = "防禦>0時對範圍2造成4傷害";
+                line2 = "回合開始時";
+                line3 = "若防禦>0時對範圍2造成4傷害";
             }
             if (level == 3) {
                 line1 = "射程3, 傷害3, 防禦x";
-                line2 = "防禦>0時對範圍3造成6傷害";
+                line2 = "回合開始時";
+                line3 = "若防禦>0時對範圍3造成6傷害";
             }
         } else if (type == 3) {
             if (level == 1) line1 = "射程1, 傷害1, 擊退x";
@@ -158,19 +162,19 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
 
         // ⬛ 對話框設計
         float descWidth = 270;
-        float descHeight =120;
+        float descHeight =120; 
 
         Rectangle descBox = {
             bounds.x,
-            bounds.y - descHeight - 8,  // 顯示在卡片上方
+            bounds.y - descHeight - 8,
             descWidth,
             descHeight
         };
-        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));  // ✅ 半透明背景
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
         DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
-        if (strlen(line2) > 0) {
-            DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 26 }, 16, 1, WHITE);
-        }
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
     }
 
         // ✅ 白雪公主技能說明
