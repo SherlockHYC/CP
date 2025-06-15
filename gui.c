@@ -19,7 +19,7 @@ void DrawShop(const Game* game);
 void DrawFocusSelection(const Game* game);
 void DrawBattleInterface(Game* game, Texture2D character_images[10]);
 void DrawGameBoard(const Game* game);
-void DrawCharSelection(Texture2D character_images[10]);
+void DrawCharSelection(const Game* game, Texture2D character_images[10]);
 void DrawPlayerInfo(const Game* game, bool is_human);
 void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_opponent_card);
 void DrawSkillPairingOverlay(const Game* game);
@@ -32,7 +32,7 @@ void DrawOverloadConfirm(Game* game);
 void DrawOverloadSelectOverlay(Game* game);
 int GetHoveredHandCardIndex(const Game* game);
 void DrawCacheSelectOverlay(Game* game);
-
+void DrawGameOver(const Game* game); 
 
 // =================================================================
 //                               繪製函式
@@ -733,25 +733,45 @@ const float CARD_BTN_H = 80;
 const float ROW_GAP = 200.0f;
 const float COL_GAP = 180.0f;
 
-void DrawCharSelection(Texture2D character_images[10]) {
+void DrawCharSelection(const Game* game, Texture2D character_images[10]) {
     DrawTexture(backgroundTexture, 0, 0, WHITE);
-    DrawTextEx(font, "Select Your Hero", (Vector2){ (float)GetScreenWidth()/2 - MeasureTextEx(font, "Select Your Hero", 60, 2).x/2, 100 }, 60, 2, WHITE);
+
+    const char* title = "Select Your Hero";
+    if (game->current_state == GAME_STATE_PVP_CHOOSE_CHAR_P1) {
+        title = "Player 1: Select Your Hero";
+    } else if (game->current_state == GAME_STATE_PVP_CHOOSE_CHAR_P2) {
+        title = "Player 2: Select Your Hero";
+    }
+    DrawTextEx(font, title, (Vector2){ (float)GetScreenWidth()/2 - MeasureTextEx(font, title, 60, 2).x/2, 100 }, 60, 2, WHITE);
+
+    // DrawTextEx(font, "Select Your Hero", (Vector2){ (float)GetScreenWidth()/2 - MeasureTextEx(font, "Select Your Hero", 60, 2).x/2, 100 }, 60, 2, WHITE);
     for (int i = 0; i < 10; i++) {
+        // int row = i / 5;
+        // float extra_y = (row == 1) ? 40.0f : 0.0f;  // 第二排整體下移 40px
+
+        // Rectangle btn_bounds = {
+        //     CARD_BTN_X + (i % 5) * COL_GAP,
+        //     CARD_BTN_Y + row * ROW_GAP + extra_y,
+        //     CARD_BTN_W,
+        //     CARD_BTN_H
+        // };
+
         int row = i / 5;
-        float extra_y = (row == 1) ? 40.0f : 0.0f;  // 第二排整體下移 40px
+        float extra_y = (row == 1) ? 40.0f : 0.0f;
+        Rectangle btn_bounds = { 200.0f + (i % 5) * 180.0f, 280.0f + row * 200.0f + extra_y, 160, 80 };
 
-        Rectangle btn_bounds = {
-            CARD_BTN_X + (i % 5) * COL_GAP,
-            CARD_BTN_Y + row * ROW_GAP + extra_y,
-            CARD_BTN_W,
-            CARD_BTN_H
-        };
+        bool is_taken = (game->current_state == GAME_STATE_PVP_CHOOSE_CHAR_P2 && i == game->p1_selected_char);
+        bool hover = !is_taken && CheckCollisionPointRec(GetMousePosition(), btn_bounds);
 
-        bool hover = CheckCollisionPointRec(GetMousePosition(), btn_bounds);
-        DrawRectangleRec(btn_bounds, hover ? SKYBLUE : LIGHTGRAY);
+        DrawRectangleRec(btn_bounds, is_taken ? DARKGRAY : (hover ? SKYBLUE : LIGHTGRAY));
         DrawRectangleLinesEx(btn_bounds, 2, BLACK);
-        DrawTextEx(font, character_names[i], (Vector2){ btn_bounds.x + 20, btn_bounds.y + 30 }, 20, 1, BLACK);
-
+        DrawTextEx(font, character_names[i], (Vector2){ btn_bounds.x + 20, btn_bounds.y + 30 }, 20, 1, is_taken ? GRAY : BLACK);
+        
+        // 如果角色已被選擇，畫一個半透明遮罩
+        if (is_taken) {
+            DrawRectangleRec(btn_bounds, Fade(BLACK, 0.6f));
+            DrawTextEx(font, "Taken", (Vector2){ btn_bounds.x + 50, btn_bounds.y + 30}, 24, 1, WHITE);
+        }
         // ✅👉 就在這裡底下加上這段：圖片等比例縮放畫法
         // === 加入圖片顯示區 ===
         float target_w = CARD_BTN_W;
@@ -911,86 +931,68 @@ void DrawGameBoard(const Game* game) {
 }
 
 
+<<<<<<< HEAD
 void DrawBattleInterface(Game* game, Texture2D character_images[10]) {
 
     const player* human = &game->inner_game.players[0];
     const player* bot = &game->inner_game.players[1];
     int distance = abs(human->locate[0] - bot->locate[0]);
+=======
+void DrawBattleInterface( Game* game) {
+    DrawGameBoard(game);
+    DrawPlayerInfo(game, true); // 繪製玩家 0 (底部)
+    DrawPlayerInfo(game, false); // 繪製玩家 1 (頂部)
+>>>>>>> origin/1v1_implement
 
+    // --- 繪製手牌 ---
+    int current_player_id = game->inner_game.now_turn_player_id;
+    const player* p_active = &game->inner_game.players[current_player_id];
     int scaled_card_width = CARD_WIDTH * HAND_SCALE;
     int scaled_card_height = CARD_HEIGHT * HAND_SCALE;
     int spacing = 15 * HAND_SCALE;
 
-    int hand_width = human->hand.SIZE * (scaled_card_width + spacing) - spacing;
+    // 繪製當前回合玩家的手牌 (在底部)
+    int hand_width = p_active->hand.SIZE * (scaled_card_width + spacing) - spacing;
     float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
-    float hand_y = GetScreenHeight() - scaled_card_height - 20;
-
-    // 繪製玩家手牌
-    for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-        Rectangle card_bounds = {
-            hand_start_x + i * (scaled_card_width + spacing),
-            hand_y,
-            scaled_card_width,
-            scaled_card_height
-        };
-
-        bool is_hovered = (game->current_state != GAME_STATE_PASSIVE_INFO) &&
-                        CheckCollisionPointRec(GetMousePosition(), card_bounds);
-        const Card* card_info = get_card_info(human->hand.array[i]);
-
-        DrawCard(card_info, card_bounds, is_hovered, false);
-
-        // [修改] 檢查可玩性並在需要時繪製遮罩
-        bool is_playable = true;
-        if (card_info) {
-            if (card_info->type == ATTACK) {
-                if (distance > 1) { // 基礎攻擊牌的射程檢查
-                    is_playable = false;
-                }
-            } else if (card_info->type == SKILL) {
-                int skill_subtype = card_info->id % 10;
-                int range = 0;
-                bool range_check_needed = false;
-
-                if (human->character == RED_HOOD) {
-                    if (skill_subtype == 1 || skill_subtype == 2 || skill_subtype == 3) {
-                        range = card_info->level;
-                        range_check_needed = true;
-                    }
-                } else if (human->character == SNOW_WHITE) {
-                    // (Notice) 白雪公主的攻擊或防禦技能射程皆為 1
-                    if (skill_subtype == 1 || skill_subtype == 2) {
-                        range = 1;
-                        range_check_needed = true;
-                    }
-                }else if (human->character == SLEEPING_BEAUTY) {
-                    if (skill_subtype == 1) { // 攻擊技能
-                        range = 1;
-                        range_check_needed = true;
-                    }
-                }
-
-                if (range_check_needed && distance > range) {
-                    is_playable = false;
-                }
-            }
-        }
-
-        if (!is_playable) {
-            DrawRectangleRec(card_bounds, Fade(BLACK, 0.6f));
-            DrawRectangleLinesEx(card_bounds, 3, RED); // 加上紅色邊框以示警告
-        }
+    for (uint32_t i = 0; i < p_active->hand.SIZE; ++i) {
+        Rectangle card_bounds = { hand_start_x + i * (scaled_card_width + spacing), GetScreenHeight() - scaled_card_height - 20, scaled_card_width, scaled_card_height };
+        const Card* card = get_card_info(p_active->hand.array[i]);
+        bool hover = CheckCollisionPointRec(GetMousePosition(), card_bounds);
+        DrawCard(card, card_bounds, hover, false);
     }
     
-    // 繪製 Bot 手牌
-    int bot_hand_width = bot->hand.SIZE * (CARD_WIDTH/1.5f + 10) - 10;
-    float bot_hand_start_x = (GetScreenWidth() - bot_hand_width) / 2.0f;
-    for (uint32_t i = 0; i < bot->hand.SIZE; ++i) {
-        Rectangle bot_card = {bot_hand_start_x + i * (CARD_WIDTH/1.5f + 10), 80, CARD_WIDTH/1.5f, CARD_HEIGHT/1.5f};
-        DrawRectangleRounded(bot_card, 0.08f, 10, DARKBLUE);
-        DrawRectangleRoundedLinesEx(bot_card, 0.08f, 10, 4, BLUE);
+    // 繪製非當前回合玩家的手牌 (在頂部，只顯示卡背)
+    const player* p_inactive = &game->inner_game.players[(current_player_id + 1) % 2];
+    hand_width = p_inactive->hand.SIZE * (scaled_card_width + spacing) - spacing;
+    hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
+    for (uint32_t i = 0; i < p_inactive->hand.SIZE; ++i) {
+        Rectangle card_bounds = { hand_start_x + i * (scaled_card_width + spacing), 20, scaled_card_width, scaled_card_height };
+        DrawCard(NULL, card_bounds, false, true);
+    }
+
+    // --- [新增] 繪製功能按鈕 ---
+    // 只有在玩家回合時才繪製這些按鈕
+    if (game->current_state == GAME_STATE_HUMAN_TURN || game->current_state == GAME_STATE_PLAYER_1_TURN || game->current_state == GAME_STATE_PLAYER_2_TURN) {
+        // 專注按鈕
+        Rectangle focus_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 120.0f, 180, 50 };
+        bool hover_focus = CheckCollisionPointRec(GetMousePosition(), focus_btn);
+        DrawRectangleRec(focus_btn, hover_focus ? LIME : GREEN);
+        DrawText("Focus", focus_btn.x + 60, focus_btn.y + 15, 20, WHITE);
+        
+        // 商店按鈕
+        Rectangle shop_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 180.0f, 180, 50 };
+        bool hover_shop = CheckCollisionPointRec(GetMousePosition(), shop_btn);
+        DrawRectangleRec(shop_btn, hover_shop ? ORANGE : GOLD);
+        DrawText("Shop", shop_btn.x + 65, shop_btn.y + 15, 20, BLACK);
+
+        // 結束回合按鈕
+        Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
+        bool hover_end = CheckCollisionPointRec(GetMousePosition(), end_turn_btn);
+        DrawRectangleRec(end_turn_btn, hover_end ? SKYBLUE : BLUE);
+        DrawText("End Turn", end_turn_btn.x + 40, end_turn_btn.y + 15, 20, WHITE);
     }
     
+<<<<<<< HEAD
     // 繪製操作按鈕
     // === End Turn 按鈕 ===
     Rectangle end_turn_btn = { GetScreenWidth() - 200.0f, GetScreenHeight() - 60.0f, 180, 50 };
@@ -1093,6 +1095,10 @@ void DrawBattleInterface(Game* game, Texture2D character_images[10]) {
             game->current_state = GAME_STATE_CACHE_SELECT;
         }
     }
+=======
+    // 顯示遊戲訊息
+    DrawText(game->message, 20, GetScreenHeight() - 40, 20, WHITE);
+>>>>>>> origin/1v1_implement
 }
 
 // DrawFocusSelection 函式 - 保持不變
@@ -1125,12 +1131,29 @@ void DrawFocusSelection(const Game* game) {
     DrawTextEx(font, "Cancel", (Vector2){ cancel_btn.x + 45, cancel_btn.y + 15 }, 20, 1, WHITE);
 }
 
-void DrawGame(Game* game, Texture2D character_images[10]) {
+void DrawGame( Game* game, Texture2D character_images[10]) {
     DrawTexture(backgroundTexture, 0, 0, WHITE);
     
-    if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
-        DrawCharSelection(character_images);
-        return;
+    switch (game->current_state) {
+        case GAME_STATE_CHOOSE_CHAR:
+        case GAME_STATE_PVP_CHOOSE_CHAR_P1:
+        case GAME_STATE_PVP_CHOOSE_CHAR_P2:
+            DrawCharSelection(game, character_images);
+            return;
+        
+        case GAME_STATE_PLAYER_1_TURN:
+        case GAME_STATE_PLAYER_2_TURN:
+        case GAME_STATE_HUMAN_TURN: // [新增] 將 PVB 的玩家回合也交給 DrawBattleInterface
+            DrawBattleInterface(game);
+            break;
+
+        case GAME_STATE_GAME_OVER:
+            DrawGameOver(game); 
+            break;
+
+        default: // 其他狀態 (如 BOT_TURN, SHOP 等) 也使用 BattleInterface
+            DrawBattleInterface(game);
+            break;
     }
 
     // --- 繪製主要遊戲介面 ---
@@ -2517,4 +2540,38 @@ void DrawCacheSelectOverlay(Game* game) {
         game->message = "已取消儲存";
         game->current_state = GAME_STATE_HUMAN_TURN;
     }
+}
+
+void DrawGameOver(const Game* game) {
+    // Draw a semi-transparent background to dim the play area
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.7f));
+
+    // Draw the result message (e.g., "Player 1 Wins!")
+    Vector2 messageSize = MeasureTextEx(font, game->message, 60, 4);
+    DrawTextEx(
+        font, 
+        game->message, 
+        (Vector2){(GetScreenWidth() - messageSize.x) / 2.0f, GetScreenHeight() / 2.0f - 80}, 
+        60, 
+        4, 
+        GOLD
+    );
+
+    // Draw the "Back to Menu" button
+    Rectangle back_btn = { (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 + 40, 250, 50 };
+    bool hover = CheckCollisionPointRec(GetMousePosition(), back_btn);
+    
+    DrawRectangleRec(back_btn, hover ? SKYBLUE : BLUE);
+    DrawRectangleLinesEx(back_btn, 3, hover ? WHITE : DARKBLUE);
+    
+    const char* btn_text = "Play Again";
+    Vector2 btnTextSize = MeasureTextEx(font, btn_text, 24, 2);
+    DrawTextEx(
+        font,
+        btn_text,
+        (Vector2){back_btn.x + (back_btn.width - btnTextSize.x) / 2, back_btn.y + (back_btn.height - btnTextSize.y) / 2},
+        24,
+        2,
+        WHITE
+    );
 }

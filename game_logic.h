@@ -12,6 +12,12 @@
 // GUI Game States
 typedef enum {
     GAME_STATE_CHOOSE_CHAR,
+    // --- [新增] PVP 模式專用的狀態 ---
+    GAME_STATE_PVP_CHOOSE_CHAR_P1,
+    GAME_STATE_PVP_CHOOSE_CHAR_P2,
+    GAME_STATE_PLAYER_1_TURN,
+    GAME_STATE_PLAYER_2_TURN,
+    // ----------------------------------
     GAME_STATE_HUMAN_TURN,
     GAME_STATE_BOT_TURN,
     GAME_STATE_GAME_OVER,
@@ -42,6 +48,10 @@ typedef struct Game {
     float bot_action_timer;
     bool player_has_acted;
 
+    // --- [新增] 用於記錄PVP中玩家一的選擇 ---
+    int p1_selected_char; 
+    // ------------------------------------
+
     vector shop_piles[3][3];
     vector shop_skill_piles[10][3];
     int pending_move_distance; 
@@ -64,6 +74,7 @@ typedef struct Game {
 // Function Prototypes
 void InitGame(Game* game);
 void UpdateGame(Game* game, bool *should_close); 
+void UpdatePVPGame(Game* game, bool *should_close);
 void resolve_sleeping_beauty_defense(Game* game, int chosen_awaken_cost); // 新增函式原型
 void resolve_sleeping_beauty_move(Game* game, int chosen_awaken_cost); // [新增] 移動技能結算函式原型
 

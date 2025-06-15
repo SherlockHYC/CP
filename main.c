@@ -17,15 +17,28 @@ Texture2D backgroundTexture;
 Texture2D character_images[10];
 Music dorothyBGM;
 
+typedef enum {
+    MODE_PVB, // 玩家對戰電腦 (Player vs Bot)
+    MODE_PVP  // 玩家對戰玩家 (Player vs Player)
+} AppMode;
 
 void show_help();
 
 int main(int argc, char *argv[])
 {
-    if (argc > 1) {
-        if (strcmp(argv[1], "--help") == 0) {
+
+    AppMode selected_mode = MODE_PVB;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--help") == 0) {
             show_help();
             return 0;
+        }
+        if (strcmp(argv[i], "--pvp") == 0) {
+            selected_mode = MODE_PVP;
+        }
+        if (strcmp(argv[i], "--pvb") == 0) {
+            selected_mode = MODE_PVB;
         }
     }
 
@@ -127,6 +140,7 @@ int main(int argc, char *argv[])
     SetTargetFPS(60);
 
     // --- [FIX] Allocate Game struct on the heap to prevent stack smashing ---
+if (selected_mode == MODE_PVB) {
     Game *game = malloc(sizeof(Game));
     if (game == NULL) {
         printf("FATAL ERROR: Failed to allocate memory for the game.\n");
@@ -136,13 +150,10 @@ int main(int argc, char *argv[])
     
     InitGame(game);
 
-    bool should_exit = false; 
-    
-    // --- Game Loop ---
-    while (!should_exit && !WindowShouldClose())
-    {
-        UpdateGame(game, &should_exit);
+    bool should_exit = false;
 
+    while (!should_exit && !WindowShouldClose()) {
+        UpdateGame(game, &should_exit);
         BeginDrawing();
         ClearBackground(DARKGRAY);
         DrawGame(game, character_images);
@@ -150,23 +161,18 @@ int main(int argc, char *argv[])
 
         CharacterType ch = game->inner_game.players[0].character;
 
-        // 若回到選角畫面，停止所有 BGM
         if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
             if (IsMusicStreamPlaying(dorothyBGM)) StopMusicStream(dorothyBGM);
             if (currentOtherBGMIndex != -1 && IsMusicStreamPlaying(otherBGMs[currentOtherBGMIndex])) {
                 StopMusicStream(otherBGMs[currentOtherBGMIndex]);
                 currentOtherBGMIndex = -1;
             }
-        }
-        // 桃樂絲播放專屬 BGM
-        else if (ch == DOROTHY) {
+        } else if (ch == DOROTHY) {
             if (!IsMusicStreamPlaying(dorothyBGM)) {
                 PlayMusicStream(dorothyBGM);
             }
             UpdateMusicStream(dorothyBGM);
-        }
-        // 其他角色隨機播放 one of 5 BGM
-        else {
+        } else {
             if (currentOtherBGMIndex == -1 || !IsMusicStreamPlaying(otherBGMs[currentOtherBGMIndex])) {
                 currentOtherBGMIndex = rand() % OTHER_BGM_COUNT;
                 PlayMusicStream(otherBGMs[currentOtherBGMIndex]);
@@ -174,11 +180,9 @@ int main(int argc, char *argv[])
             UpdateMusicStream(otherBGMs[currentOtherBGMIndex]);
         }
 
-        // ✅ 每幀更新音樂緩衝
         UpdateMusicStream(dorothyBGM);
     }
 
-    // --- Cleanup ---
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)
             freeVector(&game->shop_piles[i][j]);
@@ -193,8 +197,43 @@ int main(int argc, char *argv[])
     }
     CloseAudioDevice();
 
-    free(game); // Free the allocated memory for the game struct
+    free(game);
+    
+} else if (selected_mode == MODE_PVP) {
+    Game *game = malloc(sizeof(Game));
+    if (game == NULL) {
+        printf("FATAL ERROR: Failed to allocate memory for the game.\n");
+        CloseWindow();
+        return 1;
+    }
+
+    InitGame(game);
+    game->current_state = GAME_STATE_PVP_CHOOSE_CHAR_P1;
+
+    bool should_exit = false;
+
+    while (!should_exit && !WindowShouldClose()) {
+        UpdatePVPGame(game, &should_exit);
+        BeginDrawing();
+        ClearBackground(DARKGRAY);
+        DrawGame(game, character_images);
+        EndDrawing();
+    }
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            freeVector(&game->shop_piles[i][j]);
+
+    for (int i = 0; i < 10; ++i)
+        for (int j = 0; j < 3; ++j)
+            freeVector(&game->shop_skill_piles[i][j]);
+
+    free(game);
+}
     UnloadTexture(backgroundTexture);
+    for(int i = 0; i < 10; i++) {
+        UnloadTexture(character_images[i]);
+    }
     UnloadFont(font);
     CloseWindow();
 
@@ -208,6 +247,8 @@ void show_help() {
     printf("A 1v1 card battler where the goal is to reduce your opponent's HP to 0.\n\n");
     printf("== HOW TO RUN ==\n");
     printf("  ./TwistedFablesGUI         : (Default) Starts the Player vs. Bot game.\n");
+    printf("  ./TwistedFablesGUI --pvb   : Starts the Player vs. Bot game.\n");
+    printf("  ./TwistedFablesGUI --pvp   : Starts the Player vs. Player mode.\n");
     printf("  ./TwistedFablesGUI --help  : Shows this help message.\n\n");
     printf("== HOW TO PLAY ==\n");
     printf("  1. Select your hero using the mouse.\n");
