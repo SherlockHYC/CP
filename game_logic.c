@@ -765,7 +765,7 @@ void apply_card_effect(Game* game, int card_hand_index) {
                 game->message = TextFormat("Thorns bonus! +%d damage", game->thorns_damage_bonus[player_id]);
             }
             // 在射程內，造成傷害
-            apply_damage(attacker, defender, card->value);
+            apply_damage(attacker, defender, final_damage);
         } else {
             // 不在射程內，不造成傷害
             game->message = "Out of range!";
@@ -984,6 +984,14 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
         }else if (skill_card->id % 10 == 2) { // 睡美人防禦技能
             int bonus_level = skill_card->level;
             int num_attacks = basic_card->value;
+
+            if (attacker->sleepingBeauty.AWAKEN == 1 && attacker->sleepingBeauty.AWAKEN_TOKEN >= (uint32_t)bonus_level) {
+                attacker->sleepingBeauty.AWAKEN_TOKEN -= bonus_level;
+                num_attacks += bonus_level;
+                game->message = TextFormat("Spent %d Awaken! Thorns enhanced!", bonus_level);
+            } else {
+                game->message = "Gained Thorns!";
+            }
 
             // 設定效果狀態
             game->thorns_attacks_left[player_id] = num_attacks;
