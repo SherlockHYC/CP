@@ -752,6 +752,14 @@ void UpdatePVPGame(Game* game, bool* should_close) {
             break;
     }
     
+    if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
+        Rectangle exit_btn = { 20, 20, 100, 40 };
+        if (CheckCollisionPointRec(GetMousePosition(), exit_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            InitGame(game);
+            return;
+        }
+    }
+
     if (game->current_state != GAME_STATE_PVP_CHOOSE_CHAR_P1 && game->current_state != GAME_STATE_PVP_CHOOSE_CHAR_P2) {
         if (game->inner_game.players[0].life <= 0) { game->message = "Player 2 Wins!"; game->current_state = GAME_STATE_GAME_OVER; } 
         else if (game->inner_game.players[1].life <= 0) { game->message = "Player 1 Wins!"; game->current_state = GAME_STATE_GAME_OVER; }
