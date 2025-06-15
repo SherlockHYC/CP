@@ -64,6 +64,7 @@ typedef struct Game {
 // Function Prototypes
 void InitGame(Game* game);
 void UpdateGame(Game* game, bool *should_close); 
+void UpdatePVPGame(Game* game, bool *should_close);
 void resolve_sleeping_beauty_defense(Game* game, int chosen_awaken_cost); // 新增函式原型
 void resolve_sleeping_beauty_move(Game* game, int chosen_awaken_cost); // [新增] 移動技能結算函式原型
 

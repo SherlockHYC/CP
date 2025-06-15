@@ -509,6 +509,25 @@ void UpdateGame(Game* game, bool* should_close) {
 
 }
 
+void UpdatePVPGame(Game* game, bool* should_close) {
+    // 這是 PVP 模式的邏輯框架。
+    // 目前，它只會檢查視窗關閉事件，以確保程式可以正常退出。
+    // 之後的階段，我們會在此處加入角色選擇、玩家回合輪替等邏輯。
+
+    if (WindowShouldClose()) {
+        *should_close = true;
+        return;
+    }
+    
+    // 暫時將遊戲狀態停留在角色選擇畫面
+    if (game->current_state == GAME_STATE_CHOOSE_CHAR) {
+         // 在此處加入 PVP 的雙方角色選擇邏輯 (下一階段)
+    }
+
+    // 可以在此處更新遊戲訊息以作提示
+    game->message = "PVP Mode - Choose Your Hero!";
+}
+
 // init_player_deck 函式 - 保持不變
 void init_player_deck(player* p, CharacterType character) {
     p->character = character; 

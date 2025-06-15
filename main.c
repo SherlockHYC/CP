@@ -153,16 +153,35 @@ int main(int argc, char *argv[])
         free(game);
 
     } else if (selected_mode == MODE_PVP) {
-        // --- PVP 模式的預留位置 ---
-        while (!WindowShouldClose()) {
+        // --- [修改] PVP 模式的遊戲迴圈與初始化 ---
+        Game *game = malloc(sizeof(Game));
+        if (game == NULL) {
+            printf("FATAL ERROR: Failed to allocate memory for PVP game.\n");
+            CloseWindow();
+            return 1;
+        }
+        InitGame(game); // 重用現有的初始化函式
+        bool should_exit = false;
+
+        while (!should_exit && !WindowShouldClose()) {
+            UpdatePVPGame(game, &should_exit); // 使用新的 PVP 更新函式
+            
             BeginDrawing();
             ClearBackground(DARKGRAY);
-            DrawTexture(backgroundTexture, 0, 0, WHITE);
-            const char* message = "PVP 模式開發中...";
-            Vector2 text_size = MeasureTextEx(font, message, 50, 2);
-            DrawTextEx(font, message, (Vector2){(screenWidth - text_size.x)/2, (screenHeight - text_size.y)/2}, 50, 2, WHITE);
+            DrawGame(game, character_images); // 重用現有的繪圖函式
             EndDrawing();
         }
+
+        // Cleanup for PVP mode
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                freeVector(&game->shop_piles[i][j]);
+
+        for (int i = 0; i < 10; ++i)
+            for (int j = 0; j < 3; ++j)
+                freeVector(&game->shop_skill_piles[i][j]);
+
+        free(game);
     }
 
     // --- Cleanup ---
