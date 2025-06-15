@@ -501,10 +501,7 @@ void init_player_deck(player* p, CharacterType character) {
     p->energy = 0;
     p->snowWhite.remindPosion = initVector();
     p->sleepingBeauty.AWAKEN_TOKEN = 0;
-
-
-    p->snowWhite.remindPosion = initVector();
-
+    p->sleepingBeauty.AWAKEN = 0;
     
     // Add basic cards
     for(int k=0; k<3; ++k) pushbackVector(&p->deck, 101); // Attack LV1
@@ -1059,6 +1056,12 @@ int apply_damage(player* attacker, player* defender, int base_damage) {
         // 以下日誌可幫助您確認覺醒值是否正確增加
         printf("DEBUG: Sleeping Beauty lost %d life and gained %d Awaken Tokens. Total: %d\n", 
                life_lost, life_lost, defender->sleepingBeauty.AWAKEN_TOKEN);
+
+        if (defender->sleepingBeauty.AWAKEN == 0 && defender->sleepingBeauty.AWAKEN_TOKEN >= 6) {
+            defender->sleepingBeauty.AWAKEN = 1;
+            printf("DEBUG: Sleeping Beauty has AWAKENED!\n");
+            // 您可以在這裡設定 game->message 來通知玩家
+        }
     }
 
     // (可選) 在主控台印出日誌方便除錯
@@ -1114,6 +1117,12 @@ void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost) {
     // 4. 額外傷害等於實際損失的生命值
     int extra_damage = life_lost_for_skill;
 
+    int extra_damage_from_awaken = 0;
+    if (attacker->sleepingBeauty.AWAKEN == 1) {
+        extra_damage_from_awaken = attacker->sleepingBeauty.AWAKEN_TOKEN;
+        attacker->sleepingBeauty.AWAKEN_TOKEN = 0;
+    }
+
     // 5. 計算對敵人的總傷害
     int total_damage = base_damage + extra_damage;
 
@@ -1122,6 +1131,13 @@ void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost) {
     
     // 7. 更新遊戲訊息
     game->message = TextFormat("Lost %d HP for +%d bonus damage! Total: %d", life_lost_for_skill, extra_damage, total_damage);
+
+    if (extra_damage_from_awaken > 0 && attacker->sleepingBeauty.AWAKEN_TOKEN == 0) {
+        attacker->sleepingBeauty.AWAKEN = 0;
+        // 可以附加訊息提示狀態改變
+        // game->message = TextFormat("%s And fell back to sleep.", game->message);
+        printf("DEBUG: Sleeping Beauty returned to sleep state.\n");
+    }
 
     // 8. 將兩張牌都移至棄牌堆
     int32_t skill_id = skill_card->id;

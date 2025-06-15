@@ -633,7 +633,7 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
     
     const char* role_name = character_names[p->character];
     
-    Rectangle info_box = {(float)x_pos, (float)y_pos, 300, 80};
+    Rectangle info_box = {(float)x_pos, (float)y_pos, 300, is_human && p->character == SLEEPING_BEAUTY ? 110 : 80};
     DrawRectangleRec(info_box, Fade(BLACK, 0.7f));
     DrawRectangleLinesEx(info_box, 2, is_human ? SKYBLUE : RED);
     
@@ -641,6 +641,14 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
     DrawTextEx(font, TextFormat("HP: %d", p->life), (Vector2){ (float)x_pos + 15, (float)y_pos + 45 }, 20, 1, LIME);
     DrawTextEx(font, TextFormat("Defense: %d", p->defense), (Vector2){ (float)x_pos + 110, (float)y_pos + 45 }, 20, 1, GRAY);
     DrawTextEx(font, TextFormat("Energy: %d", p->energy), (Vector2){ (float)x_pos + 210, (float)y_pos + 45 }, 20, 1, SKYBLUE);
+
+    if (is_human && p->character == SLEEPING_BEAUTY) {
+        const char* awaken_state_text = (p->sleepingBeauty.AWAKEN == 1) ? "覺醒" : "沉睡";
+        Color state_color = (p->sleepingBeauty.AWAKEN == 1) ? MAGENTA : DARKGRAY;
+        
+        DrawTextEx(font, TextFormat("狀態: %s", awaken_state_text), (Vector2){ (float)x_pos + 15, (float)y_pos + 75 }, 20, 1, state_color);
+        DrawTextEx(font, TextFormat("覺醒值: %d", p->sleepingBeauty.AWAKEN_TOKEN), (Vector2){ (float)x_pos + 150, (float)y_pos + 75 }, 20, 1, PINK);
+    }
 
     // 被動技能按鈕（僅在玩家一側顯示）
     if (is_human) {
