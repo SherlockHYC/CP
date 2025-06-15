@@ -571,13 +571,7 @@ void start_turn(Game* game) {
         if (damage > 0) {
             int distance = abs(p_current->locate[0] - p_opponent->locate[0]);
             if (distance <= range) {
-                if(p_opponent->defense >= damage) {
-                    p_opponent->defense -= damage;
-                } else {
-                    int dmg_left = damage - p_opponent->defense;
-                    p_opponent->defense = 0;
-                    if(p_opponent->life <= dmg_left) p_opponent->life = 0; else p_opponent->life -= dmg_left;
-                }
+                apply_damage(p_current, p_opponent, damage);
             }
         }
     }
@@ -731,21 +725,7 @@ void apply_card_effect(Game* game, int card_hand_index) {
 
         if (distance <= range) {
             // 在射程內，造成傷害
-            int damage = card->value;
-            if(defender->defense >= damage) {
-                defender->defense -= damage;
-            } else { 
-                int damage_left = damage - defender->defense;
-                defender->defense = 0;
-                if (defender->life <= damage_left) {
-                    defender->life = 0;
-                } else {
-                    defender->life -= damage_left;
-                }
-
-                
-            
-            }
+            apply_damage(attacker, defender, card->value);
         } else {
             // 不在射程內，不造成傷害
             game->message = "Out of range!";
@@ -856,12 +836,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             int bonus_damage = basic_card->value;
             int total_damage = base_damage + bonus_damage;
             
-            if(defender->defense >= total_damage) defender->defense -= total_damage;
-            else { 
-                int dmg_left = total_damage - defender->defense;
-                defender->defense = 0;
-                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
-            }
+            apply_damage(attacker, defender, total_damage);
             game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
         
         } else if (skill_card->id % 10 == 2) { // 紅帽防禦技能
@@ -871,22 +846,11 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             game->pending_retaliation_level[player_id] = skill_card->level;
             game->message = TextFormat("Gained %d defense! Retaliation set!", defense_gain);
 
-            if(defender->defense >= total_damage) defender->defense -= total_damage;
-            else { 
-                int dmg_left = total_damage - defender->defense;
-                defender->defense = 0;
-                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
-            }
+            apply_damage(attacker, defender, skill_card->value);
             game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
 
         } else if (skill_card->id % 10 == 3) { // 紅帽移動技能
-            int damage = skill_card->value;
-            if(defender->defense >= damage) defender->defense -= damage;
-            else {
-                int dmg_left = damage - defender->defense;
-                defender->defense = 0;
-                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
-            }
+            apply_damage(attacker, defender, skill_card->value);
             
             int knockback_dist = basic_card->value;
             int direction = (defender->locate[0] > attacker->locate[0]) ? 1 : -1;
@@ -897,7 +861,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
                 if (next_pos == attacker->locate[0]) break;
                 defender->locate[0] = next_pos;
             }
-            game->message = TextFormat("Dealt %d damage & knocked back!", damage);
+            game->message = TextFormat("Dealt %d damage & knocked back!", skill_card->value);
         }
     // (Notice) 新增白雪公主的技能邏輯
     } else if (attacker->character == SNOW_WHITE && skill_card->type == SKILL) {
@@ -907,12 +871,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             int bonus_damage = basic_card->value;
             int total_damage = base_damage + bonus_damage;
             
-            if(defender->defense >= total_damage) defender->defense -= total_damage;
-            else { 
-                int dmg_left = total_damage - defender->defense;
-                defender->defense = 0;
-                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
-            }
+            apply_damage(attacker, defender, total_damage);
 
             // (Notice) 2. 讓對手棄置牌庫頂的牌
             int cards_to_discard = skill_card->level;
@@ -929,12 +888,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
         }else if (skill_card->id % 10 == 2) { // (Notice) 白雪公主防禦技能
             int damage = skill_card->level; // 傷害等於技能等級
             
-            if(defender->defense >= damage) defender->defense -= damage;
-            else { 
-                int dmg_left = damage - defender->defense;
-                defender->defense = 0;
-                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
-            }
+            apply_damage(attacker, defender, damage);
 
             int cards_to_move = basic_card->value;
             int cards_moved = 0;
@@ -958,12 +912,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             int move_dist = distance - 1;
             
             if (distance <= total_range) {
-                if(defender->defense >= damage) defender->defense -= damage;
-                else { 
-                    int dmg_left = damage - defender->defense;
-                    defender->defense = 0;
-                    if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
-                }
+                apply_damage(attacker, defender, damage);
                 game->message = TextFormat("Used %s, dealing %d damage!", skill_card->name, damage);
             } else {
                 game->message = "Target out of range, skill failed!";
@@ -991,25 +940,14 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             int base_value = basic_card->value;
             int total_damage = multiplier * base_value;
             
-            if(defender->defense >= total_damage) defender->defense -= total_damage;
-            else { 
-                int dmg_left = total_damage - defender->defense;
-                defender->defense = 0;
-                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
-            }
+            apply_damage(attacker, defender, total_damage);
             game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
         }
     }
     else {
         // 其他角色或技能的通用邏輯
         if (skill_card->value > 0) {
-            int damage = skill_card->value;
-            if(defender->defense >= damage) defender->defense -= damage;
-            else { 
-                int dmg_left = damage - defender->defense;
-                defender->defense = 0;
-                if(defender->life <= dmg_left) defender->life = 0; else defender->life -= dmg_left;
-            }
+            apply_damage(attacker, defender, skill_card->value);
         }
         game->message = TextFormat("Used %s!", skill_card->name);
     }
@@ -1061,10 +999,37 @@ void apply_poison_damage(player* p, const Card* card) {
     else if (card->id == 913) damage = 2; // LV3 中毒造成 2 點傷害
     
     if (damage > 0) {
-        if (p->life <= damage) {
-            p->life = 0;
+        apply_damage(NULL, p, damage);
+    }
+}
+
+void apply_damage(player* attacker, player* defender, int base_damage) {
+    if (!defender || defender->life <= 0) {
+        return;
+    }
+
+    int damage_to_apply = (base_damage < 0) ? 0 : base_damage;
+
+    // 1. 先從防禦力扣除
+    int absorbed_by_defense = (defender->defense >= damage_to_apply) ? damage_to_apply : defender->defense;
+    defender->defense -= absorbed_by_defense;
+
+    // 2. 剩餘的傷害再扣生命值
+    int remaining_damage = damage_to_apply - absorbed_by_defense;
+    if (remaining_damage > 0) {
+        if (defender->life <= remaining_damage) {
+            defender->life = 0;
         } else {
-            p->life -= damage;
+            defender->life -= remaining_damage;
         }
+    }
+
+    // (可選) 在主控台印出日誌方便除錯
+    printf("DEBUG: Damage applied. Attacker: %p, Defender: %p, Base Damage: %d, Final Life: %d\n", 
+           (void*)attacker, (void*)defender, base_damage, defender->life);
+
+    if (defender->life == 0) {
+        // 未來可以在這裡處理角色死亡的邏輯
+        printf("DEBUG: Defender has been defeated!\n");
     }
 }

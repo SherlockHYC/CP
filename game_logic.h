@@ -50,4 +50,7 @@ typedef struct Game {
 void InitGame(Game* game);
 void UpdateGame(Game* game, bool *should_close); 
 
+void apply_damage(player* attacker, player* defender, int base_damage);
+
+
 #endif // GAME_LOGIC_H
