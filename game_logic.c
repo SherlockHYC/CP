@@ -432,6 +432,9 @@ void UpdateGame(Game* game, bool* should_close) {
         case GAME_STATE_OVERLOAD_SELECT:
             // 這兩個狀態完全由 GUI 處理，這裡不需動作
             break;
+        case GAME_STATE_CACHE_SELECT:
+            break;
+
     }
 
     if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
@@ -596,6 +599,11 @@ void start_turn(Game* game) {
     int current_player_id = game->inner_game.now_turn_player_id;
     player* p_current = &game->inner_game.players[current_player_id];
     
+    //小紅帽板載緩存A
+    if (game->cacheA_card_id != -1) {
+        pushbackVector(&game->inner_game.players[0].hand, game->cacheA_card_id);
+        game->cacheA_card_id = -1;
+    }
     // (Notice) 檢查的是「當前回合玩家」(p_current) 是否有待觸發的反擊效果
     if (game->pending_retaliation_level[current_player_id] > 0 && p_current->defense > 0) {
         player* p_opponent = &game->inner_game.players[(current_player_id + 1) % 2];
@@ -682,6 +690,10 @@ void InitGame(Game* game) {
         pushbackVector(&game->shop_skill_piles[RED_HOOD][1], 702);
         pushbackVector(&game->shop_skill_piles[RED_HOOD][2], 703);
     }
+    
+    // ✅ 加在這裡最恰當
+    game->cacheA_enabled = false;
+    game->cacheA_card_id = -1;
     
 }
 
@@ -1055,6 +1067,27 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             if (!has_601_in_shop) {
                 game->current_state = GAME_STATE_OVERLOAD_CONFIRM;
                 return;  // 等待 GUI 處理
+            }
+        }
+    }
+
+    //是否啟用板載緩存A
+    if (attacker->character == RED_HOOD &&
+        skill_card->type == SKILL &&
+        attacker->life > 0) {
+
+        int type_digit = skill_card->id % 10;
+        if (type_digit == 1 || type_digit == 3) {
+            bool no_lv3_left = true;
+            vector* atk_shop = &game->shop_skill_piles[RED_HOOD][0];
+            for (uint32_t i = 0; i < atk_shop->SIZE; ++i) {
+                if (atk_shop->array[i] >= 700 && atk_shop->array[i] < 800) {
+                    no_lv3_left = false;
+                    break;
+                }
+            }
+            if (no_lv3_left) {
+                game->cacheA_enabled = true;
             }
         }
     }

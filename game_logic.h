@@ -27,7 +27,9 @@ typedef enum {
     GAME_STATE_OVERLOAD_CONFIRM,
     GAME_STATE_OVERLOAD_SELECT,
 
-    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST,
+    GAME_STATE_CACHE_SELECT
+    
 } GameState;
 
 // Main Game Struct
@@ -50,6 +52,9 @@ typedef struct Game {
 
     // [新] 新增一個變數來記錄當前的商店頁面 (0: 基礎牌, 1: 技能牌)
     int shop_page;
+    bool cacheA_enabled;        // 是否啟用板載緩存A（買完三張LV3攻擊牌）
+    int cacheA_card_id;         // 暫存卡片ID，-1 代表空
+    
 } Game;
 
 // Function Prototypes

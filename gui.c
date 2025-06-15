@@ -17,7 +17,7 @@ bool can_use_ultra1 = false;
 // 函式原型
 void DrawShop(const Game* game);
 void DrawFocusSelection(const Game* game);
-void DrawBattleInterface(const Game* game);
+void DrawBattleInterface( Game* game);
 void DrawGameBoard(const Game* game);
 void DrawCharSelection(Texture2D character_images[10]);
 void DrawPlayerInfo(const Game* game, bool is_human);
@@ -31,6 +31,8 @@ void DrawSleepingBeautyHPChoiceOverlay(const Game* game);
 void DrawOverloadConfirm(Game* game);
 void DrawOverloadSelectOverlay(Game* game);
 int GetHoveredHandCardIndex(const Game* game);
+void DrawCacheSelectOverlay(Game* game);
+void DrawCacheSelectOverlayB(Game* game);
 
 
 // =================================================================
@@ -909,7 +911,7 @@ void DrawGameBoard(const Game* game) {
 }
 
 
-void DrawBattleInterface(const Game* game) {
+void DrawBattleInterface( Game* game) {
     const player* human = &game->inner_game.players[0];
     const player* bot = &game->inner_game.players[1];
     int distance = abs(human->locate[0] - bot->locate[0]);
@@ -1026,6 +1028,55 @@ void DrawBattleInterface(const Game* game) {
     }
     Vector2 message_size = MeasureTextEx(font, turn_text, 40, 2);
     DrawTextEx(font, turn_text, (Vector2){ (GetScreenWidth() - message_size.x)/2, GetScreenHeight() / 2.0f }, 40, 2, WHITE);
+    
+    //畫出小紅帽板載緩存按鈕 A
+    // 檢查是否符合啟用條件
+    if (game->inner_game.players[0].character == RED_HOOD||game->inner_game.players[1].character == RED_HOOD) {
+        vector* atk_lv3 = &game->shop_skill_piles[RED_HOOD][0];
+        bool has_701 = false;
+        for (uint32_t i = 0; i < atk_lv3->SIZE; ++i) {
+            if (atk_lv3->array[i] == 701) {
+                has_701 = true;
+                break;
+            }
+        }
+        game->cacheA_enabled = !has_701;  // 商店中沒 701 時啟用
+    }
+
+    // 顯示 A 按鈕（只要啟用了就能看到）
+    if (game->cacheA_enabled && game->cacheA_card_id == -1) {
+        Rectangle A_btn = { GetScreenWidth() - 70, GetScreenHeight() - 230, 40, 40 };
+        DrawRectangleRec(A_btn, Fade(BLUE, 0.6f));
+        DrawTextEx(font, "A", (Vector2){ A_btn.x + 12, A_btn.y + 8 }, 20, 1, WHITE);
+
+        if (CheckCollisionPointRec(GetMousePosition(), A_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            game->current_state = GAME_STATE_CACHE_SELECT;
+        }
+    }
+
+    // --- 檢查 B 解鎖條件：小紅帽且商店中沒有 702 ---
+    if (game->inner_game.players[0].character == RED_HOOD) {
+        vector* def_lv3 = &game->shop_skill_piles[RED_HOOD][1];  // index 1 是防禦技能
+        bool has_702 = false;
+        for (uint32_t i = 0; i < def_lv3->SIZE; ++i) {
+            if (def_lv3->array[i] == 702) {
+                has_702 = true;
+                break;
+            }
+        }
+        game->cacheB_enabled = !has_702;  // 沒有 702 就啟用
+    }
+
+    if (game->cacheB_enabled && game->cacheB_card_id == -1) {
+        Rectangle B_btn = { GetScreenWidth() - 160, GetScreenHeight() - 240, 40, 40 };
+        DrawRectangleRec(B_btn, Fade(PURPLE, 0.6f));
+        DrawTextEx(font, "B", (Vector2){ B_btn.x + 12, B_btn.y + 8 }, 20, 1, WHITE);
+
+        if (CheckCollisionPointRec(GetMousePosition(), B_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            game->current_state = GAME_STATE_CACHE_SELECT_B;
+        }
+    }
+
 }
 
 // DrawFocusSelection 函式 - 保持不變
@@ -1130,7 +1181,12 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
         case GAME_STATE_OVERLOAD_SELECT:
             DrawOverloadSelectOverlay(game);
             break;
-        
+        case GAME_STATE_CACHE_SELECT:
+            DrawCacheSelectOverlay(game);
+            break;
+        case GAME_STATE_CACHE_SELECT_B:
+            DrawCacheSelectOverlayB(game);
+            break;
         
         default:
             break;
@@ -2408,4 +2464,84 @@ int GetHoveredHandCardIndex(const Game* game) {
     }
 
     return -1; // 沒有碰到任何卡
+}
+
+void DrawCacheSelectOverlay(Game* game) {
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.85f));
+    DrawTextEx(font, "選擇一張手牌存放至板載緩存A(下回合返還)?", (Vector2){ 100, 100 }, 28, 1, YELLOW);
+
+    player* p = &game->inner_game.players[0];
+    float spacing = 15;
+    float card_w = CARD_WIDTH;
+    float card_h = CARD_HEIGHT;
+    int count = p->hand.SIZE;
+    float total_w = count * (card_w + spacing) - spacing;
+    float start_x = (GetScreenWidth() - total_w) / 2.0f;
+    float y = GetScreenHeight() - card_h - 30;
+
+    for (uint32_t i = 0; i < p->hand.SIZE; ++i) {
+        int card_id = p->hand.array[i];
+        const Card* card = get_card_info(card_id);
+        Rectangle bounds = { start_x + i * (card_w + spacing), y, card_w, card_h };
+        bool hover = CheckCollisionPointRec(GetMousePosition(), bounds);
+        DrawCard(card, bounds, hover, false);
+
+        if (hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            game->cacheA_card_id = card_id;
+            eraseVector(&p->hand, i);
+            game->message = "已儲存手牌至板載緩存A";
+            game->current_state = GAME_STATE_HUMAN_TURN;
+            return;
+        }
+    }
+
+    // 取消按鈕
+    Rectangle cancel_btn = { GetScreenWidth() - 180, GetScreenHeight() - 80, 160, 50 };
+    bool cancel_hover = CheckCollisionPointRec(GetMousePosition(), cancel_btn);
+    DrawRectangleRec(cancel_btn, cancel_hover ? RED : DARKGRAY);
+    DrawTextEx(font, "取消", (Vector2){cancel_btn.x + 50, cancel_btn.y + 12}, 20, 1, WHITE);
+    if (cancel_hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        game->message = "已取消儲存";
+        game->current_state = GAME_STATE_HUMAN_TURN;
+    }
+}
+
+void DrawCacheSelectOverlayB(Game* game) {
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.85f));
+    DrawTextEx(font, "選擇一張手牌存放至板載緩存B(下回合返還)?", (Vector2){ 100, 100 }, 28, 1, YELLOW);
+
+    player* p = &game->inner_game.players[0];
+    float spacing = 15;
+    float card_w = CARD_WIDTH;
+    float card_h = CARD_HEIGHT;
+    int count = p->hand.SIZE;
+    float total_w = count * (card_w + spacing) - spacing;
+    float start_x = (GetScreenWidth() - total_w) / 2.0f;
+    float y = GetScreenHeight() - card_h - 30;
+
+    for (uint32_t i = 0; i < p->hand.SIZE; ++i) {
+        int card_id = p->hand.array[i];
+        const Card* card = get_card_info(card_id);
+        Rectangle bounds = { start_x + i * (card_w + spacing), y, card_w, card_h };
+        bool hover = CheckCollisionPointRec(GetMousePosition(), bounds);
+        DrawCard(card, bounds, hover, false);
+
+        if (hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            game->cacheB_card_id = card_id;  // ✅ 改這行
+            eraseVector(&p->hand, i);
+            game->message = "已儲存手牌至板載緩存B";
+            game->current_state = GAME_STATE_HUMAN_TURN;
+            return;
+        }
+    }
+
+    // 取消按鈕
+    Rectangle cancel_btn = { GetScreenWidth() - 180, GetScreenHeight() - 80, 160, 50 };
+    bool cancel_hover = CheckCollisionPointRec(GetMousePosition(), cancel_btn);
+    DrawRectangleRec(cancel_btn, cancel_hover ? RED : DARKGRAY);
+    DrawTextEx(font, "取消", (Vector2){cancel_btn.x + 50, cancel_btn.y + 12}, 20, 1, WHITE);
+    if (cancel_hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        game->message = "已取消儲存";
+        game->current_state = GAME_STATE_HUMAN_TURN;
+    }
 }
