@@ -472,7 +472,8 @@ void init_player_deck(player* p, CharacterType character) {
     p->life = p->maxlife;       // 同步設為最大生命值
     p->defense = 0;
     p->energy = 0;
-
+    p->snowWhite.remindPosion = initVector();
+    p->sleepingBeauty.AWAKEN_TOKEN = 0;
 
 
     p->snowWhite.remindPosion = initVector();
@@ -936,12 +937,31 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
 
     } else if(attacker->character == SLEEPING_BEAUTY && skill_card->type == SKILL) {
         if (skill_card->id % 10 == 1) { // 睡美人攻擊技能
-            int multiplier = skill_card->level;
-            int base_value = basic_card->value;
-            int total_damage = multiplier * base_value;
+            // (NOTICE) 實作新的技能機制：犧牲生命換取傷害
+            // 1. 計算來自基本牌的傷害
+            int base_damage = skill_card->level * basic_card->value;
             
+            // 2. 決定要犧牲的生命值
+            int health_cost = skill_card->level;
+            
+            // 3. 對自己造成傷害以消耗生命值，並獲取實際損失的生命值
+            //    為確保消耗的是生命值而非防禦，暫時將自身防禦設為 0
+            int original_defense = attacker->defense;
+            attacker->defense = 0;
+            int life_lost_for_skill = apply_damage(NULL, attacker, health_cost);
+            attacker->defense = original_defense; // 恢復防禦
+
+            // 4. 額外傷害等於實際損失的生命值
+            int extra_damage = life_lost_for_skill;
+
+            // 5. 計算對敵人的總傷害
+            int total_damage = base_damage + extra_damage;
+
+            // 6. 對敵人造成總傷害
             apply_damage(attacker, defender, total_damage);
-            game->message = TextFormat("Used %s! Dealt %d damage!", skill_card->name, total_damage);
+            
+            // 7. 更新遊戲訊息
+            game->message = TextFormat("Lost %d HP for +%d bonus damage! Total: %d", life_lost_for_skill, extra_damage, total_damage);
         }
     }
     else {
@@ -1003,11 +1023,12 @@ void apply_poison_damage(player* p, const Card* card) {
     }
 }
 
-void apply_damage(player* attacker, player* defender, int base_damage) {
+int apply_damage(player* attacker, player* defender, int base_damage) {
     if (!defender || defender->life <= 0) {
-        return;
+        return 0;
     }
 
+    int life_before_damage = defender->life;
     int damage_to_apply = (base_damage < 0) ? 0 : base_damage;
 
     // 1. 先從防禦力扣除
@@ -1024,6 +1045,14 @@ void apply_damage(player* attacker, player* defender, int base_damage) {
         }
     }
 
+    int life_lost = life_before_damage - defender->life;
+    if (life_lost > 0 && defender->character == SLEEPING_BEAUTY) {
+        defender->sleepingBeauty.AWAKEN_TOKEN += life_lost;
+        // 以下日誌可幫助您確認覺醒值是否正確增加
+        printf("DEBUG: Sleeping Beauty lost %d life and gained %d Awaken Tokens. Total: %d\n", 
+               life_lost, life_lost, defender->sleepingBeauty.AWAKEN_TOKEN);
+    }
+
     // (可選) 在主控台印出日誌方便除錯
     printf("DEBUG: Damage applied. Attacker: %p, Defender: %p, Base Damage: %d, Final Life: %d\n", 
            (void*)attacker, (void*)defender, base_damage, defender->life);
@@ -1032,4 +1061,6 @@ void apply_damage(player* attacker, player* defender, int base_damage) {
         // 未來可以在這裡處理角色死亡的邏輯
         printf("DEBUG: Defender has been defeated!\n");
     }
+
+    return life_lost;
 }
