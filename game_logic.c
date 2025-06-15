@@ -921,7 +921,7 @@ void apply_buy_card(Game* game, int card_id) {
         vector* pile = &game->shop_skill_piles[chara][type];
         if (pile->SIZE == 0) continue;
 
-        for (int i = pile->SIZE - 1; i >= 0; --i) {
+        for (uint32_t i = 0; i < pile->SIZE; ++i) {
             if (pile->array[i] == card_id) {
                 removeVectorAt(pile, i);  // 你需要在 vector.c 實作這個函式
                 found_in_supply = true;
