@@ -7,7 +7,8 @@
 // (Notice) 將反擊效果的結構改為一個簡單的陣列，用索引代表玩家
 // int8_t pending_retaliation_level[2]; // [0] for player 0, [1] for player 1
 
-
+#define HAND_SCALE 0.8f  // 玩家手牌縮放比例
+#define CARD_SCALE 0.8f
 // GUI Game States
 typedef enum {
     GAME_STATE_CHOOSE_CHAR,
@@ -23,6 +24,8 @@ typedef enum {
     GAME_STATE_PASSIVE_INFO,
     GAME_STATE_BATTLE,
     GAME_STATE_ULTRA,
+    GAME_STATE_OVERLOAD_CONFIRM,
+    GAME_STATE_OVERLOAD_SELECT,
 
     GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST
 } GameState;

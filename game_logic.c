@@ -141,12 +141,21 @@ void UpdateGame(Game* game, bool* should_close) {
             player* opponent = &game->inner_game.players[1];
             int distance = abs(human->locate[0] - opponent->locate[0]);
 
-            int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
+            int scaled_card_width = CARD_WIDTH * HAND_SCALE;
+            int scaled_card_height = CARD_HEIGHT * HAND_SCALE;
+            int spacing = 15 * HAND_SCALE;
+
+            int hand_width = human->hand.SIZE * (scaled_card_width + spacing) - spacing;
             float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
-            float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
+            float hand_y = GetScreenHeight() - scaled_card_height - 20;
 
             for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-                Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
+                Rectangle card_bounds = {
+                    hand_start_x + i * (scaled_card_width + spacing),
+                    hand_y,
+                    scaled_card_width,
+                    scaled_card_height
+                };
                 if (CheckCollisionPointRec(GetMousePosition(), card_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                     
                     const Card* card = get_card_info(human->hand.array[i]);
@@ -418,7 +427,11 @@ void UpdateGame(Game* game, bool* should_close) {
 
         case GAME_STATE_ULTRA:
         // 可空白不做事
-        break;
+            break;
+        case GAME_STATE_OVERLOAD_CONFIRM:
+        case GAME_STATE_OVERLOAD_SELECT:
+            // 這兩個狀態完全由 GUI 處理，這裡不需動作
+            break;
     }
 
     if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
@@ -795,11 +808,30 @@ void apply_buy_card(Game* game, int card_id) {
 
     bool found_in_supply = false;
 
+    // 🟡 [防呆] 技能卡購買限制：只允許購買「自己角色的技能卡」
+    if (card_to_buy->type == SKILL && game->shop_page == 1) {
+        int chara = buyer->character;
+        bool belongs_to_character = false;
+        for (int t = 0; t < 3; t++) {
+            vector* pile = &game->shop_skill_piles[chara][t];
+            for (uint32_t i = 0; i < pile->SIZE; ++i) {
+                if (pile->array[i] == card_id) {
+                    belongs_to_character = true;
+                    break;
+                }
+            }
+        }
+        if (!belongs_to_character) {
+            game->message = "You cannot buy other characters' skills!";
+            return;
+        }
+    }
+
     // 對基礎卡商店搜尋
-    for(int type=0; type < 3; ++type) {
-        for(int lvl=0; lvl<3; ++lvl) {
+    for (int type = 0; type < 3; ++type) {
+        for (int lvl = 0; lvl < 3; ++lvl) {
             vector* pile = &game->shop_piles[type][lvl];
-            if(pile->SIZE > 0 && pile->array[0] == card_id) {
+            if (pile->SIZE > 0 && pile->array[0] == card_id) {
                 popbackVector(pile);
                 found_in_supply = true;
                 goto BUY_DONE;
@@ -809,20 +841,19 @@ void apply_buy_card(Game* game, int card_id) {
 
     // 對技能卡商店搜尋（僅限當前角色）
     int chara = buyer->character;
-    // 技能卡商店搜尋（從後往前找，移除符合的最頂層卡）
     for (int type = 0; type < 3; ++type) {
         vector* pile = &game->shop_skill_piles[chara][type];
         if (pile->SIZE == 0) continue;
 
-        // 技能卡從上往下畫，但邏輯上從後往前檢查
         for (int i = pile->SIZE - 1; i >= 0; --i) {
             if (pile->array[i] == card_id) {
-                removeVectorAt(pile, i);  // 你需要實作這個函式
+                removeVectorAt(pile, i);  // 你需要在 vector.c 實作這個函式
                 found_in_supply = true;
                 goto BUY_DONE;
             }
         }
     }
+
 BUY_DONE:
     if (!found_in_supply) {
         game->message = "This card is sold out!";
@@ -834,6 +865,7 @@ BUY_DONE:
     game->message = TextFormat("Bought %s!", card_to_buy->name);
     game->player_has_acted = true;
 }
+
 // apply_focus_remove 函式 - 保持不變
 void apply_focus_remove(Game* game, int choice) {
     player* p = &game->inner_game.players[game->inner_game.now_turn_player_id];
@@ -996,6 +1028,37 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
     game->player_has_acted = true;
     game->pending_skill_card_index = -1;
     game->current_state = GAME_STATE_HUMAN_TURN;
+    
+    // 檢查是否觸發小紅帽被動「過載燃燒」
+    //int type_digit = skill_card->id % 10;  // 個位數代表類型
+    //bool is_atk = (type_digit == 1);
+    //bool is_def = (type_digit == 2);
+    //bool is_mov = (type_digit == 3);
+    if (attacker->character == RED_HOOD &&
+        (skill_card->type == SKILL) &&
+        (attacker->life > 0)) {
+
+        int type_digit = skill_card->id % 10;
+        if (type_digit == 1 || type_digit == 3) { // 1=攻擊, 3=移動
+
+            // 檢查商店中是否還有 id 為 601 的紅帽 LV2 攻擊技能牌
+            bool has_601_in_shop = false;
+            vector* atk_shop = &game->shop_skill_piles[RED_HOOD][0];  // 紅帽攻擊技能卡堆
+
+            for (uint32_t i = 0; i < atk_shop->SIZE; ++i) {
+                if (atk_shop->array[i] == 601) {
+                    has_601_in_shop = true;
+                    break;
+                }
+            }
+
+            if (!has_601_in_shop) {
+                game->current_state = GAME_STATE_OVERLOAD_CONFIRM;
+                return;  // 等待 GUI 處理
+            }
+        }
+    }
+
 }
 
 void initialize_shop_skill_piles(Game* game) {

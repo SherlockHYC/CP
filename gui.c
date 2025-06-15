@@ -28,6 +28,9 @@ void DrawPassiveInfoOverlay(const Game* game);
 void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool isSelected);
 void DrawUltraOverlay(const Game* game); // ✅ 加這行
 void DrawSleepingBeautyHPChoiceOverlay(const Game* game);
+void DrawOverloadConfirm(Game* game);
+void DrawOverloadSelectOverlay(Game* game);
+int GetHoveredHandCardIndex(const Game* game);
 
 
 // =================================================================
@@ -40,50 +43,55 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
         DrawRectangleRoundedLinesEx(bounds, 0.08f, 10, 4, BLUE);
         return;
     }
+
     if (is_hovered) {
-        bounds.y -= 20;
+        bounds.y -= bounds.height * 0.08f;  // 根據比例浮起
     }
+
     DrawRectangleRounded(bounds, 0.08f, 10, RAYWHITE);
     DrawRectangleRoundedLinesEx(bounds, 0.08f, 10, is_hovered ? 5 : 3, is_hovered ? GOLD : BLACK);
+
     if (card) {
-        DrawTextEx(font, card->name, (Vector2){ bounds.x + 5 , bounds.y + 15 }, 18, 1, BLACK);
-        
-        // --- 卡牌類型標籤 ---
+        float pad_x = bounds.x + 5;
+        float font_size_title = bounds.height * 0.13f;  // 卡名字體
+        float font_size_label = bounds.height * 0.10f;
+        float y_offset = bounds.y + bounds.height * 0.15f;
+
+        DrawTextEx(font, card->name, (Vector2){ pad_x, y_offset }, font_size_title, 1, BLACK);
+        y_offset += font_size_label + 5;
+
+        // 類型標籤
         if (card->type == ATTACK) {
-            DrawTextEx(font, TextFormat("Attack: %d", card->value), (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, RED);
+            DrawTextEx(font, TextFormat("Attack: %d", card->value), (Vector2){ pad_x, y_offset }, font_size_label, 1, RED);
         } else if (card->type == DEFENSE) {
-            DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, DARKGREEN);
+            DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ pad_x, y_offset }, font_size_label, 1, DARKGREEN);
         } else if (card->type == MOVE) {
-            DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, PURPLE);
+            DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ pad_x, y_offset }, font_size_label, 1, PURPLE);
         } else if (card->type == SKILL) {
             int subtype = card->id % 10;
-
-            // 判斷技能等級（根據 id 區間）
-            int level = 0;
-            if (card->id >= 500 && card->id < 600) level = 1;
-            else if (card->id >= 600 && card->id < 700) level = 2;
-            else if (card->id >= 700 && card->id < 800) level = 3;
+            int level = (card->id / 100) % 10; // 501 → level 1, 601 → level 2, etc.
 
             const char* skill_type_text = "Skill";
             switch (subtype) {
-                case 1: skill_type_text = TextFormat("[ATK] Skill%d", level); break;
-                case 2: skill_type_text = TextFormat("[DEF] Skill%d", level); break;
-                case 3: skill_type_text = TextFormat("[MOV] Skill%d", level); break;
+                case 1: skill_type_text = TextFormat("[ATK] Skill%d", level-4); break;
+                case 2: skill_type_text = TextFormat("[DEF] Skill%d", level-4); break;
+                case 3: skill_type_text = TextFormat("[MOV] Skill%d", level-4); break;
             }
 
-            DrawTextEx(font, skill_type_text, (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, BLUE);
+            DrawTextEx(font, skill_type_text, (Vector2){ pad_x, y_offset }, font_size_label, 1, BLUE);
         }
 
-        
-        // --- 能量獲取標籤 ---
+        // 能量獲得顯示
         if (card->type == ATTACK || card->type == DEFENSE || card->type == MOVE || card->type == GENERIC) {
-             DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 5, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
+            DrawTextEx(font,
+                TextFormat("Energy Gain: +%d", card->value),
+                (Vector2){ pad_x, bounds.y + bounds.height - font_size_label * 2 },
+                font_size_label, 1, SKYBLUE);
         }
 
-        // --- 顯示卡片 cost ---
-        //DrawTextEx(font, TextFormat("Cost: %d", card->cost), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 18 }, 14, 1, ORANGE);
+        // 如果要顯示 cost：
+        // DrawTextEx(font, TextFormat("Cost: %d", card->cost), (Vector2){ pad_x, bounds.y + bounds.height - font_size_label }, font_size_label, 1, ORANGE);
     }
-
     
 
     bool isRedHoodSkill        = (card->id >= 501 && card->id <= 503) ||
@@ -900,8 +908,7 @@ void DrawGameBoard(const Game* game) {
     }
 }
 
-#define HAND_SCALE 0.8f  // 玩家手牌縮放比例
-#define CARD_SCALE 0.8f
+
 void DrawBattleInterface(const Game* game) {
     const player* human = &game->inner_game.players[0];
     const player* bot = &game->inner_game.players[1];
@@ -1113,7 +1120,16 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
             break;
         case GAME_STATE_ULTRA: {
             DrawUltraOverlay(game);
+            break;
         }
+
+        case GAME_STATE_OVERLOAD_CONFIRM:
+            DrawOverloadConfirm(game);
+            break;
+        
+        case GAME_STATE_OVERLOAD_SELECT:
+            DrawOverloadSelectOverlay(game);
+            break;
         
         
         default:
@@ -1312,12 +1328,21 @@ void DrawSkillPairingOverlay(const Game* game) {
         default: required_type = GENERIC; break; // 無效類型
     }
 
-    int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
+    int scaled_card_width = CARD_WIDTH * HAND_SCALE;
+    int scaled_card_height = CARD_HEIGHT * HAND_SCALE;
+    int spacing = 15 * HAND_SCALE;
+
+    int hand_width = human->hand.SIZE * (scaled_card_width + spacing) - spacing;
     float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
-    float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
+    float hand_y = GetScreenHeight() - scaled_card_height - 20;
 
     for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-        Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
+        Rectangle card_bounds = {
+            hand_start_x + i * (scaled_card_width + spacing),
+            hand_y,
+            scaled_card_width,
+            scaled_card_height
+        };
         const Card* card_info = get_card_info(human->hand.array[i]);
         if (!card_info) continue;
 
@@ -2271,4 +2296,116 @@ void DrawSleepingBeautyHPChoiceOverlay(const Game* game) {
     bool hover = CheckCollisionPointRec(GetMousePosition(), cancel_btn);
     DrawRectangleRec(cancel_btn, hover ? RED : MAROON);
     DrawTextEx(font, "取消", (Vector2){ cancel_btn.x + 30, cancel_btn.y + 10 }, 20, 1, WHITE);
+}
+
+void DrawOverloadConfirm(Game* game) {
+    const int offsetX = 400;
+    const int offsetY = 200;
+
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+    DrawTextEx(font, "觸發被動技能\"過載燃燒\"?", (Vector2){ 50 + offsetX, 100 + offsetY }, 30, 1, YELLOW);
+
+    Rectangle yes_btn = { 100 + offsetX, 200 + offsetY, 100, 50 };
+    Rectangle no_btn =  { 220 + offsetX, 200 + offsetY, 100, 50 };
+
+    bool hover_yes = CheckCollisionPointRec(GetMousePosition(), yes_btn);
+    bool hover_no = CheckCollisionPointRec(GetMousePosition(), no_btn);
+
+    DrawRectangleRec(yes_btn, hover_yes ? GRAY : DARKGRAY);
+    DrawRectangleRec(no_btn, hover_no ? GRAY : DARKGRAY);
+
+    DrawText("YES", yes_btn.x + 30, yes_btn.y + 15, 20, WHITE);
+    DrawText("NO", no_btn.x + 30, no_btn.y + 15, 20, WHITE);
+
+    if (hover_yes && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        game->current_state = GAME_STATE_OVERLOAD_SELECT;
+    }
+    if (hover_no && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        game->current_state = GAME_STATE_HUMAN_TURN;
+    }
+}
+
+void DrawOverloadSelectOverlay(Game* game) {
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.85f));
+    DrawTextEx(font, "過載燃燒: 棄置一張技能牌以造成棄置技能等級的傷害", (Vector2){100, 100}, 28, 2, YELLOW);
+
+    player* p = &game->inner_game.players[0];
+    //int distance = abs(p->locate[0] - game->inner_game.players[1].locate[0]);
+
+    float spacing = 15;
+    float card_w = CARD_WIDTH;
+    float card_h = CARD_HEIGHT;
+    int count = p->hand.SIZE;
+    float total_w = count * (card_w + spacing) - spacing;
+    float start_x = (GetScreenWidth() - total_w) / 2.0f;
+    float y = GetScreenHeight() - card_h - 30;
+
+    for (uint32_t i = 0; i < p->hand.SIZE; ++i) {
+        int card_id = p->hand.array[i];
+        const Card* card = get_card_info(card_id);
+        if (!card || card->type != SKILL) continue;
+
+        Rectangle bounds = { start_x + i * (card_w + spacing), y, card_w, card_h };
+        bool hover = CheckCollisionPointRec(GetMousePosition(), bounds);
+        DrawCard(card, bounds, hover, false);
+
+        if (hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            int level = card->id / 100 - 4; // e.g. 601 → level = 2
+            player* enemy = &game->inner_game.players[1];
+            if (enemy->defense >= level) {
+                enemy->defense -= level;
+            } else {
+                int damage = level - enemy->defense;
+                enemy->defense = 0;
+                enemy->life -= damage;
+                if (enemy->life <= 0) enemy->life = 0;
+            }
+
+            pushbackVector(&p->graveyard, card_id);
+            eraseVector(&p->hand, i);
+            game->message = TextFormat("Overload Burn dealt %d damage!", level);
+
+            game->current_state = GAME_STATE_HUMAN_TURN;
+            return;
+        }
+    }
+
+    // 取消按鈕
+    Rectangle cancel_btn = { GetScreenWidth() - 180, GetScreenHeight() - 80, 160, 50 };
+    bool cancel_hover = CheckCollisionPointRec(GetMousePosition(), cancel_btn);
+    DrawRectangleRec(cancel_btn, cancel_hover ? RED : DARKGRAY);
+    DrawTextEx(font, "Skip", (Vector2){cancel_btn.x + 50, cancel_btn.y + 12}, 20, 1, WHITE);
+    if (cancel_hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        game->message = "Overload skipped.";
+        game->current_state = GAME_STATE_HUMAN_TURN;
+    }
+}
+
+int GetHoveredHandCardIndex(const Game* game) {
+    const player* human = &game->inner_game.players[0];
+
+    int scaled_card_width = CARD_WIDTH * HAND_SCALE;
+    int scaled_card_height = CARD_HEIGHT * HAND_SCALE;
+    int spacing = 15 * HAND_SCALE;
+
+    int hand_width = human->hand.SIZE * (scaled_card_width + spacing) - spacing;
+    float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
+    float hand_y = GetScreenHeight() - scaled_card_height - 20;
+
+    Vector2 mouse = GetMousePosition();
+
+    for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
+        Rectangle card_bounds = {
+            hand_start_x + i * (scaled_card_width + spacing),
+            hand_y,
+            scaled_card_width,
+            scaled_card_height
+        };
+
+        if (CheckCollisionPointRec(mouse, card_bounds)) {
+            return (int)i;
+        }
+    }
+
+    return -1; // 沒有碰到任何卡
 }

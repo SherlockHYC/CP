@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 
     // ✅ 在這裡載入中文點陣字型（建議放在 assets/fonts）
     // 分配足夠空間來存放中英文 + 數字 + 標點（20902 + 26*2 + 10 + 標點）
-    int total = 20902 + 26 + 26 + 10 + 8 + 15;
+    int total = 20902 + 26 + 26 + 10 + 8 + 17;
     int *codepoints = malloc(sizeof(int) * total);
     int idx = 0;
 
@@ -73,6 +73,8 @@ int main(int argc, char *argv[])
     codepoints[idx++] = 0x2265; // ≥
     codepoints[idx++] = 0x2192; // → 右箭頭符號
     codepoints[idx++] = 0x3001; // 、頓號 ✅
+    codepoints[idx++] = 0x3F;   // 半形問號 ?
+    codepoints[idx++] = 0xFF1F; // 全形問號 ？
 
     // 中文區段：0x4E00 ~ 0x9FFF
     for (int i = 0; i < 20902; ++i)
@@ -107,7 +109,7 @@ int main(int argc, char *argv[])
     SetTargetFPS(60);
 
     // --- [FIX] Allocate Game struct on the heap to prevent stack smashing ---
-    Game *game = (Game*)malloc(sizeof(Game));
+    Game *game = malloc(sizeof(Game));
     if (game == NULL) {
         printf("FATAL ERROR: Failed to allocate memory for the game.\n");
         CloseWindow();
