@@ -1035,8 +1035,6 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
     }
 }
 
-
-
 // [修改] DrawShop 函式，將技能牌分頁改為堆疊顯示相同卡牌
 void DrawShop(const Game* game) {
     float screenWidth = GetScreenWidth();
@@ -1199,7 +1197,6 @@ void DrawShop(const Game* game) {
     DrawRectangleRec(close_btn, hover ? RED : MAROON);
     DrawTextEx(font, "Close", (Vector2){close_btn.x + 45, close_btn.y + 15}, 20, 1, WHITE);
 }
-
 
 void DrawSkillPairingOverlay(const Game* game) {
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
@@ -1956,4 +1953,3 @@ void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool 
         },
         20, 1, textColor);
 }
-

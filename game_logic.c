@@ -21,6 +21,7 @@ void initialize_shop_skill_piles(Game* game);
 
 
 
+
 void end_turn(Game* game) {
     int player_id = game->inner_game.now_turn_player_id;
     player* p = &game->inner_game.players[player_id];
@@ -365,7 +366,6 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
-        // (Notice) 移除 GAME_STATE_CHOOSE_KNOCKBACK_DIRECTION 的 case
         case GAME_STATE_BOT_TURN: {
             game->bot_action_timer -= GetFrameTime();
             if (game->bot_action_timer <= 0) {
@@ -882,6 +882,7 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
             int range_bonus = skill_card->level - 1;
             int total_range = basic_card->value + range_bonus;
             int distance = abs(attacker->locate[0] - defender->locate[0]);
+            int move_dist = distance - 1;
             
             if (distance <= total_range) {
                 if(defender->defense >= damage) defender->defense -= damage;
@@ -896,6 +897,17 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
                 game->current_state = GAME_STATE_HUMAN_TURN;
                 game->pending_skill_card_index = -1;
                 return;
+            }
+
+            if (move_dist > 0) {
+                // (Notice) 自動判斷方向並直接移動
+                int direction = (defender->locate[0] > attacker->locate[0]) ? 1 : -1;
+                for (int i = 0; i < move_dist; i++) {
+                    int next_pos = attacker->locate[0] + direction;
+                    if (next_pos == defender->locate[0]) break; // Should not happen with move_dist = distance - 1
+                    attacker->locate[0] = next_pos;
+                }
+                game->message = TextFormat("Moved %d space(s) towards opponent!", move_dist);
             }
         }
         // (此處可擴充白雪公主的其他技能)
