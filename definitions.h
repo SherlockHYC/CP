@@ -11,7 +11,7 @@
 
 
 // Card and Character types that all files need to know about
-typedef enum { ATTACK, DEFENSE, MOVE, GENERIC, SKILL, STATUS } CardType;
+typedef enum { ATTACK, DEFENSE, MOVE, GENERIC, SKILL, STATUS, SUPER } CardType;
 
 typedef struct {
     int32_t id;
@@ -27,6 +27,25 @@ typedef enum {
     MULAN, KAGUYA, MERMAID, MATCH_GIRL, 
     DOROTHY, SCHEHERAZADE 
 } CharacterType;
+
+typedef struct {
+    int max_hp;
+    int max_shield;
+    int ultra_threshold;
+} CharacterStats;
+
+static const CharacterStats character_stats[] = {
+    {30, 6, 15}, // 小紅帽
+    {34, 6, 17}, // 白雪公主
+    {42, 6, 21}, // 睡美人
+    {32, 6, 16}, // 愛麗絲
+    {34, 3, 17}, // 花木蘭
+    {32, 6, 16}, // 輝夜姬
+    {36, 3, 18}, // 美人魚
+    {36, 6, 18}, // 火柴女孩
+    {40, 6, 20}, // 桃樂絲
+    {36, 6, 18}  // 山魯佐德
+};
 
 // Function prototype for our database helper
 const Card* get_card_info(int32_t card_id);

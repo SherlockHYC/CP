@@ -16,9 +16,12 @@ void apply_movement(Game* game, int direction);
 void apply_buy_card(Game* game, int card_id);
 void apply_focus_remove(Game* game, int choice);
 void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx);
-void apply_knockback(Game* game, int direction);
+//void apply_knockback(Game* game, int direction);
 void initialize_shop_skill_piles(Game* game);
 
+void apply_poison_damage(player* p, const Card* card);
+
+bool ultra_unlocked[4] = {false};  // 預設全部鎖住
 
 
 
@@ -30,22 +33,16 @@ void end_turn(Game* game) {
         int32_t card_id = p->hand.array[i];
         const Card* card = get_card_info(card_id);
 
-        // 檢查是否為中毒牌
+        // (Notice) 檢查是否為中毒牌，若為是，只觸發傷害
         if (card && card->type == STATUS) {
-            int damage = 0;
-            if (card->id == 912) damage = 1;      // LV2 中毒造成 1 點傷害
-            else if (card->id == 913) damage = 2; // LV3 中毒造成 2 點傷害
-            
-            if (damage > 0) {
-                if (p->life <= damage) {
-                    p->life = 0;
-                } else {
-                    p->life -= damage;
-                }
-            }
+            apply_poison_damage(p, card);
         }
 
+       
+
         pushbackVector(&p->graveyard, card_id);
+
+
     }
     clearVector(&p->hand);
     
@@ -184,6 +181,8 @@ void UpdateGame(Game* game, bool* should_close) {
                             can_play = false;
                             game->message = "No target in range!";
                         }
+                    }else if (card->type == STATUS) {
+                        can_play = true;
                     }
 
                     if (can_play) {
@@ -384,6 +383,10 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
+
+        case GAME_STATE_ULTRA:
+        // 可空白不做事
+        break;
     }
 
     if (game->current_state != GAME_STATE_CHOOSE_CHAR && game->current_state != GAME_STATE_GAME_OVER) {
@@ -408,9 +411,64 @@ void init_player_deck(player* p, CharacterType character) {
     p->deck = initVector(); 
     p->hand = initVector(); 
     p->graveyard = initVector(); 
-    p->life = 20; 
-    p->defense = 0; 
+    switch (character) {
+        case 0: // 小紅帽
+            p->maxlife = 30;
+            p->maxdefense = 6;
+            p->specialGate = 15;
+            break;
+        case 1: // 白雪公主
+            p->maxlife = 34;
+            p->maxdefense = 6;
+            p->specialGate = 17;
+            break;
+        case 2: // 睡美人
+            p->maxlife = 42;
+            p->maxdefense = 6;
+            p->specialGate = 21;
+            break;
+        case 3: // 愛麗絲
+            p->maxlife = 32;
+            p->maxdefense = 6;
+            p->specialGate = 16;
+            break;
+        case 4: // 花木蘭
+            p->maxlife = 34;
+            p->maxdefense = 3;
+            p->specialGate = 17;
+            break;
+        case 5: // 輝夜姬
+            p->maxlife = 32;
+            p->maxdefense = 6;
+            p->specialGate = 16;
+            break;
+        case 6: // 美人魚
+            p->maxlife = 36;
+            p->maxdefense = 3;
+            p->specialGate = 18;
+            break;
+        case 7: // 火柴女孩
+            p->maxlife = 36;
+            p->maxdefense = 6;
+            p->specialGate = 18;
+            break;
+        case 8: // 逃樂絲
+            p->maxlife = 40;
+            p->maxdefense = 6;
+            p->specialGate = 20;
+            break;
+        case 9: // 山魯佐德
+            p->maxlife = 36;
+            p->maxdefense = 6;
+            p->specialGate = 18;
+            break;
+    }
+
+    p->life = p->maxlife;       // 同步設為最大生命值
+    p->defense = 0;
     p->energy = 0;
+
+
 
     p->snowWhite.remindPosion = initVector();
 
@@ -654,8 +712,12 @@ void apply_card_effect(Game* game, int card_hand_index) {
 
     int32_t played_card_id = card->id;
     
-    // [修改] 攻擊基礎牌的處理邏輯
-    if (type == ATTACK) {
+    if (type == STATUS) {
+        attacker->energy += 1;
+        apply_poison_damage(attacker, card);
+        game->message = TextFormat("Discarded %s, took damage, gained 1 energy.", card->name);
+    }
+    else if (type == ATTACK) {
         player* defender = &game->inner_game.players[(player_id + 1) % 2];
         
         // 計算距離並檢查射程
@@ -670,8 +732,14 @@ void apply_card_effect(Game* game, int card_hand_index) {
             } else { 
                 int damage_left = damage - defender->defense;
                 defender->defense = 0;
-                if (defender->life <= damage_left) defender->life = 0;
-                else defender->life -= damage_left;
+                if (defender->life <= damage_left) {
+                    defender->life = 0;
+                } else {
+                    defender->life -= damage_left;
+                }
+
+                
+            
             }
         } else {
             // 不在射程內，不造成傷害
@@ -960,6 +1028,23 @@ void initialize_shop_skill_piles(Game* game) {
             pushbackVector(pile, lv3);
             pushbackVector(pile, lv3);
             pushbackVector(pile, lv3);
+        }
+    }
+}
+
+void apply_poison_damage(player* p, const Card* card) {
+    if (!p || !card || card->type != STATUS) return;
+
+    int damage = 0;
+    // 假設 911 是 LV1, 912 是 LV2, 913 是 LV3
+    if (card->id == 912) damage = 1;      // LV2 中毒造成 1 點傷害
+    else if (card->id == 913) damage = 2; // LV3 中毒造成 2 點傷害
+    
+    if (damage > 0) {
+        if (p->life <= damage) {
+            p->life = 0;
+        } else {
+            p->life -= damage;
         }
     }
 }

@@ -2,11 +2,17 @@
 #include "definitions.h"
 #include "raylib.h"
 #include "database.h"
+#include <stdbool.h>
+#define ULTRA_CARD_WIDTH  140*1.2
+#define ULTRA_CARD_HEIGHT 200*1.2
 
 // 外部變數與函式
 extern const char* character_names[];
 extern Font font;
 extern Texture2D backgroundTexture;
+
+//能否打開必殺欄位
+bool can_use_ultra1 = false;
 
 // 函式原型
 void DrawShop(const Game* game);
@@ -20,6 +26,7 @@ void DrawSkillPairingOverlay(const Game* game);
 void apply_buy_card(Game* game, int card_id);
 void DrawPassiveInfoOverlay(const Game* game);
 void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool isSelected);
+void DrawUltraOverlay(const Game* game); // ✅ 加這行
 
 // =================================================================
 //                               繪製函式
@@ -37,15 +44,15 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
     DrawRectangleRounded(bounds, 0.08f, 10, RAYWHITE);
     DrawRectangleRoundedLinesEx(bounds, 0.08f, 10, is_hovered ? 5 : 3, is_hovered ? GOLD : BLACK);
     if (card) {
-        DrawTextEx(font, card->name, (Vector2){ bounds.x + 10, bounds.y + 15 }, 18, 1, BLACK);
+        DrawTextEx(font, card->name, (Vector2){ bounds.x + 5 , bounds.y + 15 }, 18, 1, BLACK);
         
         // --- 卡牌類型標籤 ---
         if (card->type == ATTACK) {
-            DrawTextEx(font, TextFormat("Attack: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, RED);
+            DrawTextEx(font, TextFormat("Attack: %d", card->value), (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, RED);
         } else if (card->type == DEFENSE) {
-            DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, DARKGREEN);
+            DrawTextEx(font, TextFormat("Defense: %d", card->value), (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, DARKGREEN);
         } else if (card->type == MOVE) {
-            DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, PURPLE);
+            DrawTextEx(font, TextFormat("Move: %d", card->value), (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, PURPLE);
         } else if (card->type == SKILL) {
             int subtype = card->id % 10;
 
@@ -62,13 +69,13 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
                 case 3: skill_type_text = TextFormat("[MOV] Skill%d", level); break;
             }
 
-            DrawTextEx(font, skill_type_text, (Vector2){ bounds.x + 15, bounds.y + 50 }, 16, 1, BLUE);
+            DrawTextEx(font, skill_type_text, (Vector2){ bounds.x + 5, bounds.y + 50 }, 16, 1, BLUE);
         }
 
         
         // --- 能量獲取標籤 ---
         if (card->type == ATTACK || card->type == DEFENSE || card->type == MOVE || card->type == GENERIC) {
-             DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
+             DrawTextEx(font, TextFormat("Energy Gain: +%d", card->value), (Vector2){ bounds.x + 5, bounds.y + CARD_HEIGHT - 35 }, 14, 1, SKYBLUE);
         }
 
         // --- 顯示卡片 cost ---
@@ -635,6 +642,7 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
 
     // 被動技能按鈕（僅在玩家一側顯示）
     if (is_human) {
+        // 🎯 被動技按鈕 P
         Rectangle passive_btn = { x_pos + 160, y_pos - 50, 40, 40 };
         bool hover = CheckCollisionPointRec(GetMousePosition(), passive_btn);
         bool click = hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
@@ -645,7 +653,63 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
         if (click) {
             ((Game*)game)->current_state = GAME_STATE_PASSIVE_INFO;
         }
+    
+        // 🎯 必殺技按鈕 U
+        Rectangle ultra_btn = { x_pos + 210, y_pos - 50, 40, 40 };
+        bool ultra_hover = CheckCollisionPointRec(GetMousePosition(), ultra_btn);
+        bool ultra_click = ultra_hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+
+        // 取得目前玩家
+        int player_id = game->inner_game.now_turn_player_id;
+        const player* p = &game->inner_game.players[player_id];
+
+        // 即時檢查生命是否低於觸發閥值
+        bool can_use_ultra = (p->life <= p->specialGate);
+        if(can_use_ultra) can_use_ultra1 = true;
+
+        //can_use_ultra1 = true;
+        // 使用粉紅主題的 DrawPassiveButton 畫 U 鍵（亮起或灰色）
+        DrawPassiveButton(ultra_btn, "U", ultra_hover, can_use_ultra1 && game->current_state == GAME_STATE_ULTRA);
+
+        // 畫鎖頭提示
+        if (!can_use_ultra1) {
+            // 計算中心點位置
+            int fontSize = 20;
+            Vector2 lockSize = MeasureTextEx(font, " X ", fontSize+40, 1);
+            DrawTextEx(font, " X ",
+                (Vector2){
+                    (ultra_btn.x + (ultra_btn.width  - lockSize.x) / 2) +6,
+                    (ultra_btn.y + (ultra_btn.height - lockSize.y) / 2) +5
+                },
+                fontSize+30, 1, BLACK);
+        }
+
+        // 👉 畫黃色圓圈 + 黑色文字（必殺閾值）
+        int radius = 14;
+        int centerX = ultra_btn.x + ultra_btn.width + 20;
+        int centerY = ultra_btn.y + ultra_btn.height / 2;
+
+        // 畫圓形
+        DrawCircle(centerX, centerY, radius, YELLOW);
+
+        // 畫數字（黑色，置中）
+        char threshold_text[8];
+        sprintf(threshold_text, "%d", p->specialGate);
+
+        int fontSize = 16;
+        int textWidth = MeasureText(threshold_text, fontSize);
+        DrawText(threshold_text, centerX - textWidth / 2, centerY - fontSize / 2, fontSize, BLACK);
+
+        // 點擊後切換狀態（只有能用時才有效）
+        if (ultra_click && can_use_ultra1) {
+            ((Game*)game)->current_state = GAME_STATE_ULTRA;     // ✅ 保留轉型
+        }
+            
+    
     }
+
+
+
 
 }
 
@@ -834,23 +898,34 @@ void DrawGameBoard(const Game* game) {
     }
 }
 
+#define HAND_SCALE 0.8f  // 玩家手牌縮放比例
+#define CARD_SCALE 0.8f
 void DrawBattleInterface(const Game* game) {
     const player* human = &game->inner_game.players[0];
     const player* bot = &game->inner_game.players[1];
     int distance = abs(human->locate[0] - bot->locate[0]);
 
-    int hand_width = human->hand.SIZE * (CARD_WIDTH + 15) - 15;
+    int scaled_card_width = CARD_WIDTH * HAND_SCALE;
+    int scaled_card_height = CARD_HEIGHT * HAND_SCALE;
+    int spacing = 15 * HAND_SCALE;
+
+    int hand_width = human->hand.SIZE * (scaled_card_width + spacing) - spacing;
     float hand_start_x = (GetScreenWidth() - hand_width) / 2.0f;
-    float hand_y = GetScreenHeight() - CARD_HEIGHT - 20;
-    
+    float hand_y = GetScreenHeight() - scaled_card_height - 20;
+
     // 繪製玩家手牌
     for (uint32_t i = 0; i < human->hand.SIZE; ++i) {
-        Rectangle card_bounds = { hand_start_x + i * (CARD_WIDTH + 15), hand_y, CARD_WIDTH, CARD_HEIGHT };
+        Rectangle card_bounds = {
+            hand_start_x + i * (scaled_card_width + spacing),
+            hand_y,
+            scaled_card_width,
+            scaled_card_height
+        };
+
         bool is_hovered = (game->current_state != GAME_STATE_PASSIVE_INFO) &&
                         CheckCollisionPointRec(GetMousePosition(), card_bounds);
         const Card* card_info = get_card_info(human->hand.array[i]);
-        
-        // 繪製基礎卡牌
+
         DrawCard(card_info, card_bounds, is_hovered, false);
 
         // [修改] 檢查可玩性並在需要時繪製遮罩
@@ -1026,6 +1101,12 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
             DrawTextEx(font, "Return to Menu", (Vector2){ back_btn.x + 50, back_btn.y + 15 }, 20, 1, WHITE);
             break;
         }
+
+        case GAME_STATE_ULTRA: {
+            DrawUltraOverlay(game);
+        }
+        
+        
         default:
             break;
     }
@@ -1952,4 +2033,196 @@ void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool 
             bounds.y + (bounds.height - textSize.y) / 2
         },
         20, 1, textColor);
+}
+
+void DrawUltraOverlay(const Game* game) {
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.85f));
+    DrawTextEx(font, "角色必殺技", (Vector2){100, 80}, 40, 2, WHITE);
+    float screenWidth = GetScreenWidth();
+    float screenHeight = GetScreenHeight();
+
+    const player* p = &game->inner_game.players[0];
+    int chara = p->character;
+
+    int base_id = 801 + chara * 10;  // ex: 小紅帽 801~803
+
+    for (int i = 0; i < 3; ++i) {
+        int card_id = base_id + i;
+        const Card* c = get_card_info(card_id);
+        if (!c) continue;
+
+        float spacing = 190; // 卡片間距
+        float total_width = 3 * ULTRA_CARD_WIDTH + 2 * spacing;
+        float start_x = (GetScreenWidth() - total_width) / 2;
+
+        Rectangle rect = {
+            start_x + i * (ULTRA_CARD_WIDTH + spacing),
+            240,  // ✅ Y 軸往下移一點（原本 180）
+            ULTRA_CARD_WIDTH,
+            ULTRA_CARD_HEIGHT
+        };
+
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), rect);
+        DrawCard(c, rect, hovered, false);
+
+
+        // 說明文字
+        const char* desc = "";
+
+        switch (card_id) {
+            // 小紅帽
+            case 801:
+                desc = "將任意技能供應牌庫頂部\n兩張加入手牌\n這不是一個購買行動";
+                break;
+            case 802:
+                desc = "重複你剛使用的\n攻擊、移動技能或行動效果\n(可重複蛻變牌效果)";
+                break;
+            case 803:
+                desc = "射程3 傷害3 \n擊退對手至多三格\n之後對手捨棄三張手牌";
+                break;
+
+            // 白雪公主
+            case 811:
+                desc = "射程1 對手失去X點生命\nX為其棄牌堆中中毒牌數量";
+                break;
+            case 812:
+                desc = "射程1 傷害3\n對手棄掉全部手牌後抽4張";
+                break;
+            case 813:
+                desc = "射程3 傷害3\n可將對手棄牌堆中至多3張牌洗回牌庫";
+                break;
+
+            // 睡美人 Sleeping Beauty
+            case 821:
+                desc = "無論處於何種狀態\n立即獲得3個覺醒TOKEN（可超過上限）\n若仍為沉睡狀態，可立即覺醒";
+                break;
+            case 822:
+                desc = "[持續]直到下回合開始\n每當你因傷害失去生命時\n抽等量張數的牌（最多6張）";
+                break;
+            case 823:
+                desc = "無論處於何種狀態\n花費所有覺醒TOKEN\n每花費1個，恢復1點生命";
+                break;
+
+            // 愛麗絲 Alice
+            case 831:
+                desc = "在本回合結束階段抽牌後\n將手牌棄至4張 並立即開始新回合\n（最多連續使用3次）";
+                break;
+            case 832:
+                desc = "直到回合結束前\n你的攻擊、防禦、移動牌數值 +1\n（可與其他效果累積）";
+                break;
+            case 833:
+                desc = "射程3 傷害3\n將手牌與/或棄牌堆中\n最多5張基本牌洗入對手牌庫";
+                break;
+            
+            // 花木蘭 Mulan
+            case 841:
+                desc = "在本回合結束階段抽牌時\n額外抽取4張牌";
+                break;
+            case 842:
+                desc = "將你移動至與對手相鄰的格子\n並立即獲得3點氣";
+                break;
+            case 843:
+                desc = "射程1\n立即花費所有氣來造成X點傷害\nX等於你花費的氣的量";
+                break;
+
+            // 輝夜姬 Kaguya
+            case 851:
+                desc = "[持續]直到你下回合開始前\n你不會承受傷害，也不會失去生命";
+                break;
+            case 852:
+                desc = "防禦6\n[持續]下回合開始階段\n若對手防禦低於你，他失去等量生命";
+                break;
+            case 853:
+                desc = "將對手移動到與你相鄰的格子並造成3傷害\n[持續]下回合開始時\n再次將對手拉近並造成3傷害";
+                break;
+
+            // 美人魚 Mermaid
+            case 861:
+                desc = "你的生命上限變為18\n在你每個回合結束時恢復2點生命";
+                break;
+            case 862:
+                desc = "將所有觸手移動到你的位置上\n對手對你造成的傷害-X，\nX為你身上的觸手數\n你的技能永久變為對應等級的基本牌\n每回合結束時你失去1點生命";
+                break;
+            case 863:
+                desc = "若觸手進入對手格子：對手失去1點生命\n若對手進入有觸手的格子：他失去X點生命\nX為該格觸手數量";
+                break;
+
+            // 火柴女孩 Match Girl
+            case 871:
+                desc = "射程1 傷害X\nX為你目前能量數的一半（向上取整）";
+                break;
+            case 872:
+                desc = "射程3\n棄掉對手牌庫頂6張\n每有一張火柴，對手失去1點生命";
+                break;
+            case 873:
+                desc = "從火柴牌庫中選擇最多3張火柴\n放置到對手牌庫頂部";
+                break;
+
+            // 逃樂絲 Dorothy
+            case 881:
+                desc = "射程1\n花費X個連擊TOKEN\n造成X點傷害並獲得X點能量";
+                break;
+            case 882:
+                desc = "花費X個連擊TOKEN\n恢復X點生命";
+                break;
+            case 883:
+                desc = "花費X個連擊TOKEN\n抽取 X / 2 張牌（向上取整）";
+                break;
+
+            // 山魯佐德 Scheherazade
+            case 891:
+                desc = "射程3 傷害3\n選擇一個有命運TOKEN的供應牌庫\n棄掉對手牌庫中所有來自該牌庫的牌\n每棄1張造成1傷害，最後重洗其牌庫";
+                break;
+            case 892:
+                desc = "射程3 傷害3\n選擇一個有命運TOKEN的供應牌庫\n對手棄牌堆每有1張來自該牌庫的牌\n此攻擊+1 傷害（紅色TOKEN則+2）";
+                break;
+            case 893:
+                desc = "射程3 傷害X\n將至多3枚藍色命運TOKEN翻為紅色\nX等於此次翻轉的數量";
+                break;
+
+            default:
+                desc = "";
+                break;
+        }
+
+        // 分行顯示說明（黃色、大字、偏左）
+        int line_height = 22;
+        int font_size = 20;
+        float margin_x = -10;  // 偏左一點
+        int y_offset = 0;
+        char buffer[128];
+        const char* ptr = desc;
+
+        while (*ptr) {
+            int i = 0;
+            while (ptr[i] && ptr[i] != '\n') i++;
+            strncpy(buffer, ptr, i);
+            buffer[i] = '\0';
+
+            DrawTextEx(font, buffer,
+                (Vector2){
+                    rect.x + margin_x,
+                    rect.y + ULTRA_CARD_HEIGHT + 12 + y_offset
+                },
+                font_size, 1, YELLOW);
+
+            y_offset += line_height;
+            ptr += i;
+            if (*ptr == '\n') ptr++;
+        }
+
+    }
+
+    // --- 繪製關閉按鈕 ---
+    Rectangle close_btn = { screenWidth - 160, screenHeight - 70, 140, 50 };
+    bool hover = CheckCollisionPointRec(GetMousePosition(), close_btn);
+    DrawRectangleRec(close_btn, hover ? RED : MAROON);
+    DrawTextEx(font, "Close", (Vector2){close_btn.x + 45, close_btn.y + 15}, 20, 1, WHITE);
+
+    if (hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+    
+        ((Game*)game)->current_state = GAME_STATE_HUMAN_TURN;
+
+    }
+
 }
