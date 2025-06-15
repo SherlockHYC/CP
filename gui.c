@@ -27,6 +27,8 @@ void apply_buy_card(Game* game, int card_id);
 void DrawPassiveInfoOverlay(const Game* game);
 void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool isSelected);
 void DrawUltraOverlay(const Game* game); // ✅ 加這行
+void DrawSleepingBeautyHPChoiceOverlay(const Game* game);
+
 
 // =================================================================
 //                               繪製函式
@@ -1106,7 +1108,9 @@ void DrawGame(Game* game, Texture2D character_images[10]) {
             DrawTextEx(font, "Return to Menu", (Vector2){ back_btn.x + 50, back_btn.y + 15 }, 20, 1, WHITE);
             break;
         }
-
+        case GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST:
+            DrawSleepingBeautyHPChoiceOverlay(game);
+            break;
         case GAME_STATE_ULTRA: {
             DrawUltraOverlay(game);
         }
@@ -2230,4 +2234,41 @@ void DrawUltraOverlay(const Game* game) {
 
     }
 
+}
+
+void DrawSleepingBeautyHPChoiceOverlay(const Game* game) {
+    // 繪製半透明背景
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+
+    // 顯示提示訊息
+    Vector2 msg_size = MeasureTextEx(font, game->message, 30, 1);
+    DrawTextEx(font, game->message, (Vector2){(GetScreenWidth() - msg_size.x) / 2, GetScreenHeight() / 2 - 40}, 30, 1, WHITE);
+
+    // 獲取技能卡資訊以決定最大消耗
+    const player* human = &game->inner_game.players[0];
+    const Card* skill_card = get_card_info(human->hand.array[game->pending_skill_card_index]);
+    if (!skill_card) return; // 安全檢查
+    int max_hp_cost = skill_card->level;
+
+    // 動態繪製選項按鈕
+    float total_buttons_width = (max_hp_cost + 1) * 70.0f - 10.0f;
+    float start_x = GetScreenWidth() / 2.0f - total_buttons_width / 2.0f;
+    
+    for (int i = 0; i <= max_hp_cost; i++) {
+        Rectangle btn_bounds = { start_x + i * 70.0f, GetScreenHeight() / 2.0f + 20, 60, 40 };
+        bool hover = CheckCollisionPointRec(GetMousePosition(), btn_bounds);
+        
+        DrawRectangleRec(btn_bounds, hover ? SKYBLUE : BLUE);
+        DrawRectangleLinesEx(btn_bounds, 2, WHITE);
+        
+        const char* btn_text = TextFormat("%d", i);
+        Vector2 text_size = MeasureTextEx(font, btn_text, 20, 1);
+        DrawTextEx(font, btn_text, (Vector2){btn_bounds.x + (btn_bounds.width - text_size.x)/2, btn_bounds.y + 10}, 20, 1, WHITE);
+    }
+
+    // 繪製取消按鈕
+    Rectangle cancel_btn = { GetScreenWidth() / 2.0f - 50, GetScreenHeight() / 2.0f + 80, 100, 40 };
+    bool hover = CheckCollisionPointRec(GetMousePosition(), cancel_btn);
+    DrawRectangleRec(cancel_btn, hover ? RED : MAROON);
+    DrawTextEx(font, "取消", (Vector2){ cancel_btn.x + 30, cancel_btn.y + 10 }, 20, 1, WHITE);
 }

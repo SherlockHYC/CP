@@ -18,7 +18,7 @@ void apply_focus_remove(Game* game, int choice);
 void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx);
 //void apply_knockback(Game* game, int direction);
 void initialize_shop_skill_piles(Game* game);
-
+void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost);
 void apply_poison_damage(player* p, const Card* card);
 
 bool ultra_unlocked[4] = {false};  // 預設全部鎖住
@@ -388,6 +388,33 @@ void UpdateGame(Game* game, bool* should_close) {
             }
             break;
         }
+        case GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST: {
+            const player* human = &game->inner_game.players[0];
+            const Card* skill_card = get_card_info(human->hand.array[game->pending_skill_card_index]);
+            if (!skill_card) { // 安全檢查
+                game->current_state = GAME_STATE_HUMAN_TURN;
+                break;
+            }
+            int max_hp_cost = skill_card->level;
+            
+            // 檢查玩家點擊了哪個消耗生命值的按鈕
+            for (int i = 0; i <= max_hp_cost; i++) {
+                Rectangle btn_bounds = { GetScreenWidth() / 2.0f - (max_hp_cost + 1) * 35.0f + i * 70.0f, GetScreenHeight() / 2.0f + 20, 60, 40 };
+                 if (CheckCollisionPointRec(GetMousePosition(), btn_bounds) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    resolve_sleeping_beauty_attack(game, i);
+                    return;
+                }
+            }
+            // 檢查取消按鈕
+            Rectangle cancel_btn = { GetScreenWidth() / 2.0f - 50, GetScreenHeight() / 2.0f + 80, 100, 40 };
+            if (CheckCollisionPointRec(GetMousePosition(), cancel_btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                game->current_state = GAME_STATE_HUMAN_TURN;
+                game->message = "Your Turn!";
+                game->pending_skill_card_index = -1;
+                game->pending_basic_card_index = -1;
+            }
+            break;
+        }
 
         case GAME_STATE_ULTRA:
         // 可空白不做事
@@ -601,6 +628,7 @@ void InitGame(Game* game) {
     game->message = "Select Your Hero";
     game->turn_count = 0;
     game->pending_skill_card_index = -1;
+    game->pending_basic_card_index = -1;
     game->shop_page = 0;
     
     // (Notice) 初始化兩位玩家的反擊效果等級為 0
@@ -937,31 +965,11 @@ void resolve_skill_and_basic(Game* game, int skill_idx, int basic_idx) {
 
     } else if(attacker->character == SLEEPING_BEAUTY && skill_card->type == SKILL) {
         if (skill_card->id % 10 == 1) { // 睡美人攻擊技能
-            // (NOTICE) 實作新的技能機制：犧牲生命換取傷害
-            // 1. 計算來自基本牌的傷害
-            int base_damage = skill_card->level * basic_card->value;
-            
-            // 2. 決定要犧牲的生命值
-            int health_cost = skill_card->level;
-            
-            // 3. 對自己造成傷害以消耗生命值，並獲取實際損失的生命值
-            //    為確保消耗的是生命值而非防禦，暫時將自身防禦設為 0
-            int original_defense = attacker->defense;
-            attacker->defense = 0;
-            int life_lost_for_skill = apply_damage(NULL, attacker, health_cost);
-            attacker->defense = original_defense; // 恢復防禦
-
-            // 4. 額外傷害等於實際損失的生命值
-            int extra_damage = life_lost_for_skill;
-
-            // 5. 計算對敵人的總傷害
-            int total_damage = base_damage + extra_damage;
-
-            // 6. 對敵人造成總傷害
-            apply_damage(attacker, defender, total_damage);
-            
-            // 7. 更新遊戲訊息
-            game->message = TextFormat("Lost %d HP for +%d bonus damage! Total: %d", life_lost_for_skill, extra_damage, total_damage);
+            // (NOTICE) 進入選擇生命消耗的狀態，而不是直接計算傷害
+            game->pending_basic_card_index = basic_idx; // 儲存基本牌的索引
+            game->current_state = GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST;
+            game->message = "選擇要消耗多少生命值以造成額外傷害";
+            return; // 立即返回，等待玩家選擇
         }
     }
     else {
@@ -1063,4 +1071,74 @@ int apply_damage(player* attacker, player* defender, int base_damage) {
     }
 
     return life_lost;
+}
+
+void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost) {
+    int player_id = game->inner_game.now_turn_player_id;
+    player* attacker = &game->inner_game.players[player_id];
+    player* defender = &game->inner_game.players[(player_id + 1) % 2];
+
+    int skill_idx = game->pending_skill_card_index;
+    int basic_idx = game->pending_basic_card_index;
+    
+    // 安全檢查
+    if (skill_idx < 0 || basic_idx < 0 || (uint32_t)skill_idx >= attacker->hand.SIZE || (uint32_t)basic_idx >= attacker->hand.SIZE) {
+        game->current_state = GAME_STATE_HUMAN_TURN;
+        game->message = "Error: Invalid card index.";
+        return;
+    }
+    
+    const Card* skill_card = get_card_info(attacker->hand.array[skill_idx]);
+    const Card* basic_card = get_card_info(attacker->hand.array[basic_idx]);
+
+    if (!skill_card || !basic_card) {
+        game->current_state = GAME_STATE_HUMAN_TURN;
+        return;
+    }
+    
+    // 1. 計算來自基本牌的傷害
+    int base_damage = skill_card->level * basic_card->value;
+    
+    // 2. 根據玩家選擇決定要犧牲的生命值
+    int health_cost = chosen_hp_cost;
+    
+    // 3. 對自己造成傷害以消耗生命值
+    int life_lost_for_skill = 0;
+    if (health_cost > 0) {
+        int original_defense = attacker->defense;
+        attacker->defense = 0;
+        life_lost_for_skill = apply_damage(NULL, attacker, health_cost);
+        attacker->defense = original_defense;
+    }
+
+    // 4. 額外傷害等於實際損失的生命值
+    int extra_damage = life_lost_for_skill;
+
+    // 5. 計算對敵人的總傷害
+    int total_damage = base_damage + extra_damage;
+
+    // 6. 對敵人造成總傷害
+    apply_damage(attacker, defender, total_damage);
+    
+    // 7. 更新遊戲訊息
+    game->message = TextFormat("Lost %d HP for +%d bonus damage! Total: %d", life_lost_for_skill, extra_damage, total_damage);
+
+    // 8. 將兩張牌都移至棄牌堆
+    int32_t skill_id = skill_card->id;
+    int32_t basic_id = basic_card->id;
+    if (skill_idx > basic_idx) {
+        eraseVector(&attacker->hand, skill_idx);
+        eraseVector(&attacker->hand, basic_idx);
+    } else {
+        eraseVector(&attacker->hand, basic_idx);
+        eraseVector(&attacker->hand, skill_idx);
+    }
+    pushbackVector(&attacker->graveyard, skill_id);
+    pushbackVector(&attacker->graveyard, basic_id);
+
+    // 9. 重設狀態並返回玩家回合
+    game->player_has_acted = true;
+    game->pending_skill_card_index = -1;
+    game->pending_basic_card_index = -1;
+    game->current_state = GAME_STATE_HUMAN_TURN;
 }

@@ -22,7 +22,9 @@ typedef enum {
     // ✅ 新增的狀態
     GAME_STATE_PASSIVE_INFO,
     GAME_STATE_BATTLE,
-    GAME_STATE_ULTRA
+    GAME_STATE_ULTRA,
+
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST
 } GameState;
 
 // Main Game Struct
@@ -38,6 +40,7 @@ typedef struct Game {
     int pending_move_distance; 
     int turn_count;
     int pending_skill_card_index;
+    int pending_basic_card_index;
 
     int8_t pending_retaliation_level[2];
 
