@@ -12,6 +12,10 @@
 // GUI Game States
 typedef enum {
     GAME_STATE_CHOOSE_CHAR,
+    GAME_STATE_PVP_CHOOSE_CHAR_P1,
+    GAME_STATE_PVP_CHOOSE_CHAR_P2,
+    GAME_STATE_PLAYER_1_TURN,
+    GAME_STATE_PLAYER_2_TURN,
     GAME_STATE_HUMAN_TURN,
     GAME_STATE_BOT_TURN,
     GAME_STATE_GAME_OVER,
@@ -19,15 +23,15 @@ typedef enum {
     GAME_STATE_CHOOSE_MOVE_DIRECTION,
     GAME_STATE_FOCUS_REMOVE,
     GAME_STATE_AWAITING_BASIC_FOR_SKILL,
-
-    // ✅ 新增的狀態
     GAME_STATE_PASSIVE_INFO,
     GAME_STATE_BATTLE,
     GAME_STATE_ULTRA,
     GAME_STATE_OVERLOAD_CONFIRM,
     GAME_STATE_OVERLOAD_SELECT,
-
-    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_HP_COST,
+    GAME_STATE_CACHE_SELECT,
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_AWAKEN_COST,
+    GAME_STATE_SLEEPING_BEAUTY_CHOOSE_MOVE_AWAKEN_COST
 } GameState;
 
 // Main Game Struct
@@ -37,8 +41,12 @@ typedef struct Game {
     const char* message;
     float bot_action_timer;
     bool player_has_acted;
+    int p1_selected_char; 
 
-    vector shop_piles[3][3];
+    // --- [修正] 確保只有一個 shop_piles 的宣告 ---
+    vector shop_piles[2][3][3]; // [player_id][type][level]
+    // ---------------------------------------------
+    
     vector shop_skill_piles[10][3];
     int pending_move_distance; 
     int turn_count;
@@ -46,16 +54,25 @@ typedef struct Game {
     int pending_basic_card_index;
 
     int8_t pending_retaliation_level[2];
-
-
-    // [新] 新增一個變數來記錄當前的商店頁面 (0: 基礎牌, 1: 技能牌)
+    int thorns_attacks_left[2];
+    int thorns_damage_bonus[2];
+    
     int shop_page;
+    bool cacheA_enabled;
+    int cacheA_card_id;
+    
+    bool show_scream_image;
+    float scream_timer;
+    int scream_image_index;
+        
 } Game;
 
-// Function Prototypes
+// (函式原型不變)
 void InitGame(Game* game);
 void UpdateGame(Game* game, bool *should_close); 
-
+void UpdatePVPGame(Game* game, bool *should_close);
+void resolve_sleeping_beauty_defense(Game* game, int chosen_awaken_cost);
+void resolve_sleeping_beauty_move(Game* game, int chosen_awaken_cost);
 int apply_damage(player* attacker, player* defender, int base_damage);
 
 
