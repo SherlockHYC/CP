@@ -16,6 +16,7 @@ Font font;
 Texture2D backgroundTexture;
 Texture2D character_images[10];
 Music dorothyBGM;
+Texture2D screamImages[3];
 
 typedef enum {
     MODE_PVB, // 玩家對戰電腦 (Player vs Bot)
@@ -124,6 +125,11 @@ int main(int argc, char *argv[])
     //font = GetFontDefault();
     backgroundTexture = LoadTexture("background.png");
 
+
+    screamImages[0] = LoadTexture("assets/scream.png");
+    screamImages[1] = LoadTexture("assets/scream1.png");
+    screamImages[2] = LoadTexture("assets/scream2.png");
+
     character_images[0] = LoadTexture("assets/redhood.png");
     character_images[1] = LoadTexture("assets/snowwhite.png");
     character_images[2] = LoadTexture("assets/sleeping.png");
@@ -219,6 +225,9 @@ if (selected_mode == MODE_PVB) {
         DrawGame(game, character_images);
         EndDrawing();
     }
+
+    for (int i = 0; i < 3; ++i)
+        UnloadTexture(screamImages[i]);
 
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)

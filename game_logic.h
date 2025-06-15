@@ -69,6 +69,10 @@ typedef struct Game {
     bool cacheA_enabled;        // 是否啟用板載緩存A（買完三張LV3攻擊牌）
     int cacheA_card_id;         // 暫存卡片ID，-1 代表空
     
+    bool show_scream_image;
+    float scream_timer;
+    int scream_image_index;
+        
 } Game;
 
 // Function Prototypes

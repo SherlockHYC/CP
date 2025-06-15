@@ -10,7 +10,7 @@
 extern const char* character_names[];
 extern Font font;
 extern Texture2D backgroundTexture;
-
+extern Texture2D screamImages[3];  // 在 gui.c 開頭宣告
 //能否打開必殺欄位
 bool can_use_ultra1 = false;
 
@@ -1121,6 +1121,20 @@ void DrawFocusSelection(const Game* game) {
 }
 
 void DrawGame( Game* game, Texture2D character_images[10]) {
+    
+    
+    if (game->show_scream_image) {
+        DrawTexturePro(
+            screamImages[game->scream_image_index],
+            (Rectangle){0, 0, screamImages[0].width, screamImages[0].height},
+            (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
+            (Vector2){0, 0},
+            0.0f,
+            WHITE
+        );
+        return;
+    }
+    
     DrawTexture(backgroundTexture, 0, 0, WHITE);
     
     switch (game->current_state) {

@@ -5,6 +5,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stddef.h> // 為了 offsetof
+
+#define container_of(ptr, type, member) \
+    ((type *)((char *)(ptr) - offsetof(type, member)))
 
 // 函式原型
 void shuffle_deck(vector* deck);
@@ -507,6 +511,13 @@ void UpdateGame(Game* game, bool* should_close) {
         if (game->inner_game.players[1].life <= 0) { game->message = "You Win!"; game->current_state = GAME_STATE_GAME_OVER; }
     }
     
+    if (game->show_scream_image) {
+        game->scream_timer -= GetFrameTime();
+        if (game->scream_timer <= 0.0f) {
+            game->show_scream_image = false;
+        }
+        return; // 跳過其他更新
+    }
 
 }
 
@@ -812,6 +823,9 @@ void InitGame(Game* game) {
     game->pending_basic_card_index = -1;
     game->p1_selected_char = -1; // 初始化玩家一的選擇為「無」
     game->shop_page = 0;
+    game->show_scream_image = false;
+    game->scream_timer = 0.0f;
+    game->scream_image_index = 0;
     
     // (Notice) 初始化兩位玩家的反擊效果等級為 0
     game->pending_retaliation_level[0] = 0;
@@ -1366,6 +1380,11 @@ int apply_damage(player* attacker, player* defender, int base_damage) {
             defender->sleepingBeauty.AWAKEN = 1;
             printf("DEBUG: Sleeping Beauty has AWAKENED!\n");
             // 您可以在這裡設定 game->message 來通知玩家
+            Game* full_game = container_of(defender, Game, inner_game.players[1]);
+
+            full_game->show_scream_image = true;
+            full_game->scream_timer = 0.5f;
+            full_game->scream_image_index = rand() % 3;
         }
     }
 
@@ -1484,6 +1503,7 @@ void resolve_sleeping_beauty_defense(Game* game, int chosen_awaken_cost) {
     // 消耗覺醒值並增加生效次數
     if (chosen_awaken_cost > 0) {
         attacker->sleepingBeauty.AWAKEN_TOKEN -= chosen_awaken_cost;
+        if (attacker->sleepingBeauty.AWAKEN_TOKEN == 0)  attacker->sleepingBeauty.AWAKEN = 0;
         num_attacks += chosen_awaken_cost;
         game->message = TextFormat("消耗%d覺醒值! 荊棘效果已強化!", chosen_awaken_cost);
     } else {
