@@ -21,7 +21,8 @@ typedef enum {
 
     // ✅ 新增的狀態
     GAME_STATE_PASSIVE_INFO,
-    GAME_STATE_BATTLE
+    GAME_STATE_BATTLE,
+    GAME_STATE_ULTRA
 } GameState;
 
 // Main Game Struct

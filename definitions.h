@@ -11,7 +11,7 @@
 
 
 // Card and Character types that all files need to know about
-typedef enum { ATTACK, DEFENSE, MOVE, GENERIC, SKILL, STATUS } CardType;
+typedef enum { ATTACK, DEFENSE, MOVE, GENERIC, SKILL, STATUS, SUPER } CardType;
 
 typedef struct {
     int32_t id;

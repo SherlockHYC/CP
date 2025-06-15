@@ -211,7 +211,58 @@ const Card card_database[] = {
     DEF_CARD(593, "[SH]監視之眼",        SKILL, 1, 0, 0), // 等級2 傷害1 花費0 射程1
     DEF_CARD(693, "[SH]操縱之手",        SKILL, 2, 2, 2), // 等級2 傷害2 花費2 射程2
     DEF_CARD(793, "[SH]支配之腦",        SKILL, 3, 3, 4), // 等級3 傷害3 花費4 射程3
-       
+    
+    
+    //個個角色必殺技
+    // [Red Hood] 必殺技 (ID: 801~803)
+    DEF_CARD(801, "[RH]餓狼吞噬", SUPER, 1, 5, 3),
+    DEF_CARD(802, "[RH]系統入侵", SUPER, 2, 7, 5),
+    DEF_CARD(803, "[RH]復仇之雨", SUPER, 3, 10, 7),
+
+    // [Snow White] 必殺技 (ID: 811~813)
+    DEF_CARD(811, "[SW]七蛇之怒", SUPER, 1, 5, 3),
+    DEF_CARD(812, "[SW]魔鏡之雨", SUPER, 2, 7, 5),
+    DEF_CARD(813, "[SW]醞釀之災", SUPER, 3, 10, 7),
+
+    // [Sleeping Beauty] 必殺技 (ID: 821~823)
+    DEF_CARD(821, "[SB]喚醒沉睡", SUPER, 1, 5, 3),
+    DEF_CARD(822, "[SB]白日夢魘", SUPER, 2, 7, 5),
+    DEF_CARD(823, "[SB]血脈重鑄", SUPER, 3, 10, 7),
+
+    // [Alice] 必殺技 (ID: 831~833)
+    DEF_CARD(831, "[AL]無休止的派對", SUPER, 1, 5, 3),
+    DEF_CARD(832, "[AL]精彩的奇妙日", SUPER, 2, 7, 5),
+    DEF_CARD(833, "[AL]遊戲盡在掌控", SUPER, 3, 10, 7),
+
+    // [Mulan] 必殺技 (ID: 841~843)
+    DEF_CARD(841, "[MU]氣沖雲霄", SUPER, 1, 5, 3),
+    DEF_CARD(842, "[MU]直面混沌", SUPER, 2, 7, 5),
+    DEF_CARD(843, "[MU]雷霆一擊", SUPER, 3, 10, 7),
+
+    // [Kaguya] 必殺技 (ID: 851~853)
+    DEF_CARD(851, "[KA]炙熱的竹刀", SUPER, 1, 5, 3),
+    DEF_CARD(852, "[KA]注定的審判", SUPER, 2, 7, 5),
+    DEF_CARD(853, "[KA]躁動的血性", SUPER, 3, 10, 7),
+
+    // [Mermaid] 必殺技 (ID: 861~863)
+    DEF_CARD(861, "[MM]人魚復興", SUPER, 1, 5, 3),
+    DEF_CARD(862, "[MM]遠古甦醒", SUPER, 2, 7, 5),
+    DEF_CARD(863, "[MM]淨化之潮", SUPER, 3, 10, 7),
+
+    // [Match Girl] 必殺技 (ID: 871~873)
+    DEF_CARD(871, "[MG]地獄烈焰", SUPER, 1, 5, 3),
+    DEF_CARD(872, "[MG]厄運降臨", SUPER, 2, 7, 5),
+    DEF_CARD(873, "[MG]貪婪詛咒", SUPER, 3, 10, 7),
+
+    // [Dorothy] 必殺技 (ID: 881~883)
+    DEF_CARD(881, "[DO]獅子", SUPER, 1, 5, 3),
+    DEF_CARD(882, "[DO]鐵皮人", SUPER, 2, 7, 5),
+    DEF_CARD(883, "[DO]稻草人", SUPER, 3, 10, 7),
+
+    // [Scheherazade] 必殺技 (ID: 891~893)
+    DEF_CARD(891, "[SH]系統刪除", SUPER, 1, 5, 3),
+    DEF_CARD(892, "[SH]無法自拔", SUPER, 2, 7, 5),
+    DEF_CARD(893, "[SH]切斷通路", SUPER, 3, 10, 7),
     
     // Status Cards
     DEF_CARD(911, "[Status] Poison LV1", STATUS, 1, 0, 0),
