@@ -74,6 +74,539 @@ void DrawCard(const Card* card, Rectangle bounds, bool is_hovered, bool is_oppon
         // --- 顯示卡片 cost ---
         //DrawTextEx(font, TextFormat("Cost: %d", card->cost), (Vector2){ bounds.x + 15, bounds.y + CARD_HEIGHT - 18 }, 14, 1, ORANGE);
     }
+
+    
+
+    bool isRedHoodSkill        = (card->id >= 501 && card->id <= 503) ||
+                                 (card->id >= 601 && card->id <= 603) ||
+                                 (card->id >= 701 && card->id <= 703);
+    
+    bool isSnowWhiteSkill      = (card->id >= 511 && card->id <= 513) ||
+                                 (card->id >= 611 && card->id <= 613) ||
+                                 (card->id >= 711 && card->id <= 713);
+    
+    bool isSleepingBeautySkill = (card->id >= 521 && card->id <= 523) ||
+                                 (card->id >= 621 && card->id <= 623) ||
+                                 (card->id >= 721 && card->id <= 723);
+    
+    // 愛麗絲技能卡 ID：531~533, 631~633, 731~733
+    bool isAliceSkill          = (card->id >= 531 && card->id <= 533) ||
+                                 (card->id >= 631 && card->id <= 633) ||
+                                 (card->id >= 731 && card->id <= 733);
+    
+    // 花木蘭技能卡 ID：541~543, 641~643, 741~743
+    bool isMulanSkill = (card->id >= 541 && card->id <= 543) ||
+                        (card->id >= 641 && card->id <= 643) ||
+                        (card->id >= 741 && card->id <= 743);
+
+    // 輝夜姬技能卡 ID：551~553, 651~653, 751~753
+    bool isKaguyaSkill = (card->id >= 551 && card->id <= 553) ||
+                        (card->id >= 651 && card->id <= 653) ||
+                        (card->id >= 751 && card->id <= 753);
+
+    // 美人魚技能卡 ID：561~563, 661~663, 761~763
+    bool isMermaidSkill = (card->id >= 561 && card->id <= 563) ||
+                        (card->id >= 661 && card->id <= 663) ||
+                        (card->id >= 761 && card->id <= 763);
+
+    // 火柴女孩技能卡 ID：571~573, 671~673, 771~773
+    bool isMatchGirlSkill = (card->id >= 571 && card->id <= 573) ||
+                            (card->id >= 671 && card->id <= 673) ||
+                            (card->id >= 771 && card->id <= 773);
+
+    // 桃樂絲技能卡 ID：581~583, 681~683, 781~783
+    bool isDorothySkill = (card->id >= 581 && card->id <= 583) ||
+                        (card->id >= 681 && card->id <= 683) ||
+                        (card->id >= 781 && card->id <= 783);
+
+    // 山魯佐德技能卡 ID：591~593, 691~693, 791~793
+    bool isScheherazadeSkill = (card->id >= 591 && card->id <= 593) ||
+                            (card->id >= 691 && card->id <= 693) ||
+                            (card->id >= 791 && card->id <= 793);
+
+                        
+    // 顯示小紅帽卡牌說明
+    if (is_hovered && isRedHoodSkill) {
+        int level = card->id / 100 - 4;   // 501 → 1, 601 → 2, 701 → 3
+        int type  = card->id % 10;        // 1:攻擊 2:防禦 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+
+        if (type == 1) {
+            if (level == 1) line1 = "射程1, 傷害1+x";
+            if (level == 2) line1 = "射程2, 傷害2+x";
+            if (level == 3) line1 = "射程3, 傷害3+x";
+        } else if (type == 2) {
+            if (level == 1) {
+                line1 = "射程1, 傷害1, 防禦x";
+                line2 = "防禦>0時對範圍1造成2傷害";
+            }
+            if (level == 2) {
+                line1 = "射程2, 傷害2, 防禦x";
+                line2 = "防禦>0時對範圍2造成4傷害";
+            }
+            if (level == 3) {
+                line1 = "射程3, 傷害3, 防禦x";
+                line2 = "防禦>0時對範圍3造成6傷害";
+            }
+        } else if (type == 3) {
+            if (level == 1) line1 = "射程1, 傷害1, 擊退x";
+            if (level == 2) line1 = "射程2, 傷害2, 擊退x";
+            if (level == 3) line1 = "射程3, 傷害3, 擊退x";
+        }
+
+        // ⬛ 對話框設計
+        float descWidth = 270;
+        float descHeight =120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,  // 顯示在卡片上方
+            descWidth,
+            descHeight
+        };
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));  // ✅ 半透明背景
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        if (strlen(line2) > 0) {
+            DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 26 }, 16, 1, WHITE);
+        }
+    }
+
+        // ✅ 白雪公主技能說明
+    else if (is_hovered && isSnowWhiteSkill) {
+        int level = card->id / 100 - 4;  // 511→1, 611→2, 711→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+
+        if (type == 1) {
+            line1 = TextFormat("射程1, 傷害%d+x", level);
+            line2 = TextFormat("將對手牌庫最上面%d張", level);
+            line3 = "放入棄牌區";
+        } else if (type == 2) {
+            line1 = TextFormat("射程1, 傷害%d", level);
+            line2 = "將中毒牌庫頂部至多x張";
+            line3 = "放入對手棄牌區";
+        } else if (type == 3) {
+            line1 = TextFormat("射程x+%d, 傷害%d", level - 1, level);
+            line2 = "將自己放置到與敵人";
+            line3 = "相鄰的格子";
+        }
+
+        float descWidth = 270;
+        float descHeight =120; 
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+    }
+    
+    
+    //睡美人技能說明
+    else if (is_hovered && isSleepingBeautySkill) {
+        int level = card->id / 100 - 4;  // 521→1, 621→2, 721→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+
+        if (type == 1) {
+            line1 = TextFormat("射程1, 傷害%dx", level);
+            line2 = TextFormat("可對自己造成y傷害獲得", "");
+            line3 = TextFormat("傷害+y，y最多為%d", level);
+        } else if (type == 2) {
+            line1 = "直到回合結束前";
+            line2 = TextFormat("x+Token 次攻擊將獲得傷害+%d", level);
+            line3 = "（傷害不須連續使用）";
+        } else if (type == 3) {
+            line1 = TextFormat("射程%d, 傷害x+Token", level + 1);
+            line2 = "將對手向我方向移動x格";
+            line3 = "";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+    }
+
+    // 愛麗絲技能說明
+    else if (is_hovered && isAliceSkill) {
+        int level = card->id / 100 - 4;  // 531→1, 631→2, 731→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能（紅心皇后身分）
+            line1 = TextFormat("射程%d, 傷害%d", level, level);
+            line2 = TextFormat("展示 %d 張牌，沒展示造成額外傷害", level + 2);
+            line3 = "可從展示牌找供應區同名牌入棄牌堆";
+            line4 = "身分轉變為紅心皇后";
+        } else if (type == 2) {
+            // 防禦技能（瘋帽子身分）
+            line1 = TextFormat("防禦 %d，移除基本牌", level);
+            line2 = "每移除一張，從基本牌庫放一張";
+            line3 = TextFormat("等級<= %d 基本牌入棄牌堆", level);
+            line4 = "身分轉變為瘋帽子";
+        } else if (type == 3) {
+            // 移動技能（柴郡貓身分）
+            line1 = TextFormat("向一方向移動至多 %d+x 格", level);
+            line2 = "穿過對手時可抽牌";
+            line3 = TextFormat("抽 %d 張牌", level);
+            line4 = "身分轉變為柴郡貓";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120; // 多一行 → 增高
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 花木蘭技能說明
+    else if (is_hovered && isMulanSkill) {
+        int level = card->id / 100 - 4;  // 541→1, 641→2, 741→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程1, 傷害%d+x", level);
+            line2 = "可將對手移動到你相鄰的一格";
+            line3 = "若對手在邊緣，隨機棄一張手牌";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = "防禦x，回合結束時抽牌階段";
+            line2 = TextFormat("可花y氣額外抽y張牌，y最多為%d", level);
+            line3 = "";
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程1, 傷害%d，擊退對手x格", level);
+            line2 = "自己移動到與對手相鄰的格子";
+            line3 = "若對手在邊緣，隨機棄一張手牌";
+            line4 = "";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 輝夜姬技能說明
+    else if (is_hovered && isKaguyaSkill) {
+        int level = card->id / 100 - 4;  // 551→1, 651→2, 751→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程1, 傷害%d+x", level);
+            line2 = "若當前擁有3點防禦";
+            line3 = "則額外+1傷害";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = TextFormat("防禦%d+x，展示牌庫頂 %d 張牌", level, level);
+            line2 = "若是防禦技能牌則加入手牌";
+            line3 = "否則可選擇棄掉或放回頂部";
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程x, 傷害%d，失去1生命", level);
+            line2 = "可移除手牌或棄牌堆中一張牌";
+            if (level >= 2) {
+                line3 = "持續：若敵人超出射程4-x";
+                line4 = TextFormat("則對他造成 %d 點傷害", level * 2);
+            } else {
+                line3 = "";
+                line4 = "";
+            }
+        }
+
+        float descWidth = 270;
+        float descHeight = 120; 
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+
+    // 美人魚技能說明
+    else if (is_hovered && isMermaidSkill) {
+        int level = card->id / 100 - 4;  // 561→1, 661→2, 761→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程%d, 傷害%d+x", level, level);
+            line2 = TextFormat("若敵在觸手格, 傷害+%d", level);
+            if (level == 1) line3 = "若你在觸手格, 能量+1";
+            else line3 = "若你在觸手格, 能量+3";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = "若敵在觸手格, 對其造成x傷害";
+            line2 = TextFormat("你可移動到觸手格並獲得防禦%d", level);
+            line3 = "（不能與對手在同一格）";
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = "選一觸手並移動至多x格(≥1)";
+            line2 = TextFormat("若你在觸手格, 抽 %d 張牌", level);
+            if (level == 1) {
+                line3 = "";
+                line4 = "";
+            } else {
+                line3 = TextFormat("若敵在觸手格, 捨棄 %d 張手牌", level - 1);
+                line4 = "";
+            }
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 火柴女孩技能說明
+    else if (is_hovered && isMatchGirlSkill) {
+        int level = card->id / 100 - 4;  // 571→1, 671→2, 771→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程1, 傷害%d+x", level);
+            line2 = "可花能量強化傷害";
+            line3 = "每花3點能量 → 傷害+1";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = "防禦1，可失去生命來抽牌";
+            line2 = TextFormat("最多失去 %d 點生命", level);
+            line3 = TextFormat("抽取 %d 張牌", level);
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程%d, 傷害%d", level, level);
+            line2 = "可將對手棄牌堆中火柴放回火柴庫";
+            if (level == 1) {
+                line3 = "每放1張 → 能量+1";
+                line4 = "";
+            } else if (level == 2) {
+                line3 = "每放1張 → 能量+2, 生命+1";
+                line4 = "";
+            } else {
+                line3 = "每放1張 → 能量+3, 生命+2";
+                line4 = "";
+            }
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 桃樂絲技能說明
+    else if (is_hovered && isDorothySkill) {
+        int level = card->id / 100 - 4;  // 581→1, 681→2, 781→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程1, 傷害%d+x，擊退x格", level);
+            line2 = "若對手無法後退";
+            line3 = "則每格無法後退 → 傷害+1";
+            line4 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = TextFormat("射程%d, 傷害x", level + 5);  // 6~8
+            line2 = TextFormat("可棄至多 %d 張牌", level);
+            line3 = TextFormat("抽取 y+1 張牌 (y為棄牌數)", level);
+            line4 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程%d+x", level);
+            line2 = "傷害 = y+1";
+            line3 = "y為你與對手之間的格子數";
+            line4 = "";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6 }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+    }
+
+    // 山魯佐德技能說明
+    else if (is_hovered && isScheherazadeSkill) {
+        int level = card->id / 100 - 4;  // 591→1, 691→2, 791→3
+        int type  = card->id % 10;       // 1:攻擊, 2:防禦, 3:移動
+
+        const char* line1 = "";
+        const char* line2 = "";
+        const char* line3 = "";
+        const char* line4 = "";
+        const char* line5 = "";
+
+        if (type == 1) {
+            // 攻擊技能
+            line1 = TextFormat("射程%d, 傷害%d+x", level, level);
+            line2 = TextFormat("可翻轉最多 %d 枚", level);
+            line3 = "藍色命運TOKEN為紅色";
+            line4 = "";
+            line5 = "";
+        } else if (type == 2) {
+            // 防禦技能
+            line1 = "防禦x，放置命運TOKEN";
+            line2 = TextFormat("可放至對手供應區最多 %d 張牌", level);
+            line3 = "持續：對手購買該牌時";
+            line4 = "需額外支付1點能量";
+            line5 = "";
+        } else if (type == 3) {
+            // 移動技能
+            line1 = TextFormat("射程%d, 傷害%d", level, level);
+            line2 = "展示對手牌庫頂x張牌";
+            line3 = "每來自帶藍TOKEN的牌庫";
+            line4 = "就翻轉該牌庫1枚TOKEN為紅色";
+            line5 = "每張展示牌可棄掉或放回原位";
+        }
+
+        float descWidth = 270;
+        float descHeight = 120;  // 五行顯示高度
+
+        Rectangle descBox = {
+            bounds.x,
+            bounds.y - descHeight - 8,
+            descWidth,
+            descHeight
+        };
+
+        DrawRectangleRounded(descBox, 0.2f, 6, Fade(BLACK, 0.7f));
+        DrawTextEx(font, line1, (Vector2){ descBox.x + 10, descBox.y + 6  }, 16, 1, WHITE);
+        DrawTextEx(font, line2, (Vector2){ descBox.x + 10, descBox.y + 30 }, 16, 1, WHITE);
+        DrawTextEx(font, line3, (Vector2){ descBox.x + 10, descBox.y + 54 }, 16, 1, WHITE);
+        DrawTextEx(font, line4, (Vector2){ descBox.x + 10, descBox.y + 78 }, 16, 1, WHITE);
+        DrawTextEx(font, line5, (Vector2){ descBox.x + 10, descBox.y + 102 }, 16, 1, WHITE);
+    }
+
+
 }
 
 // DrawPlayerInfo 函式 - 保持不變
@@ -96,7 +629,7 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
     DrawTextEx(font, TextFormat("Defense: %d", p->defense), (Vector2){ (float)x_pos + 110, (float)y_pos + 45 }, 20, 1, GRAY);
     DrawTextEx(font, TextFormat("Energy: %d", p->energy), (Vector2){ (float)x_pos + 210, (float)y_pos + 45 }, 20, 1, SKYBLUE);
 
-// 被動技能按鈕（僅在玩家一側顯示）
+    // 被動技能按鈕（僅在玩家一側顯示）
     if (is_human) {
         Rectangle passive_btn = { x_pos + 160, y_pos - 50, 40, 40 };
         bool hover = CheckCollisionPointRec(GetMousePosition(), passive_btn);
@@ -109,6 +642,7 @@ void DrawPlayerInfo(const Game* game, bool is_human) {
             ((Game*)game)->current_state = GAME_STATE_PASSIVE_INFO;
         }
     }
+
 }
 
 //介面參數
@@ -1332,17 +1866,17 @@ void DrawPassiveInfoOverlay(const Game* game) {
 }
 
 void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool isSelected) {
-    // ✅ 使用 DARKBLUE 作為基底顏色
-    Color borderColor = isSelected ? ORANGE : (isHovered ? WHITE : WHITE);
-    Color fillColor   = isSelected ? Fade(ORANGE, 0.4f) :
-                       (isHovered ? Fade(SKYBLUE, 0.4f) : BLUE);  // ← 改這裡
-    Color textColor   = isSelected ? ORANGE : (isHovered ? WHITE : WHITE);
+    // 🎀 粉紅主題配色
+    Color borderColor = WHITE;
+    Color fillColor   = isSelected ? RED :
+                        (isHovered ? MAGENTA : PINK);
+    Color textColor   = WHITE;
 
-    // ✅ 畫底色 + 邊框
+    // 底色 + 邊框
     DrawRectangleRounded(bounds, 0.3f, 6, fillColor);
     DrawRectangleRoundedLines(bounds, 0.3f, 6, borderColor);
 
-    // ✅ 文字置中
+    // 文字置中
     Vector2 textSize = MeasureTextEx(font, text, 20, 1);
     DrawTextEx(font, text,
         (Vector2){
@@ -1351,5 +1885,4 @@ void DrawPassiveButton(Rectangle bounds, const char* text, bool isHovered, bool 
         },
         20, 1, textColor);
 }
-
 
