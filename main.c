@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
     SetTargetFPS(60);
 
     // --- [FIX] Allocate Game struct on the heap to prevent stack smashing ---
-    Game *game = (Game*)malloc(sizeof(Game));
+    Game *game = malloc(sizeof(Game));
     if (game == NULL) {
         printf("FATAL ERROR: Failed to allocate memory for the game.\n");
         CloseWindow();
