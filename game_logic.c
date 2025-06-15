@@ -1051,7 +1051,7 @@ int apply_damage(player* attacker, player* defender, int base_damage) {
     }
 
     int life_lost = life_before_damage - defender->life;
-    if (life_lost > 0 && defender->character == SLEEPING_BEAUTY) {
+    if (life_lost > 0 && defender->character == SLEEPING_BEAUTY && defender->sleepingBeauty.AWAKEN == 0) {
         defender->sleepingBeauty.AWAKEN_TOKEN += life_lost;
         // 以下日誌可幫助您確認覺醒值是否正確增加
         printf("DEBUG: Sleeping Beauty lost %d life and gained %d Awaken Tokens. Total: %d\n", 
@@ -1117,12 +1117,6 @@ void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost) {
     // 4. 額外傷害等於實際損失的生命值
     int extra_damage = life_lost_for_skill;
 
-    int extra_damage_from_awaken = 0;
-    if (attacker->sleepingBeauty.AWAKEN == 1) {
-        extra_damage_from_awaken = attacker->sleepingBeauty.AWAKEN_TOKEN;
-        attacker->sleepingBeauty.AWAKEN_TOKEN = 0;
-    }
-
     // 5. 計算對敵人的總傷害
     int total_damage = base_damage + extra_damage;
 
@@ -1132,7 +1126,7 @@ void resolve_sleeping_beauty_attack(Game* game, int chosen_hp_cost) {
     // 7. 更新遊戲訊息
     game->message = TextFormat("Lost %d HP for +%d bonus damage! Total: %d", life_lost_for_skill, extra_damage, total_damage);
 
-    if (extra_damage_from_awaken > 0 && attacker->sleepingBeauty.AWAKEN_TOKEN == 0) {
+    if (attacker->sleepingBeauty.AWAKEN_TOKEN == 0) {
         attacker->sleepingBeauty.AWAKEN = 0;
         // 可以附加訊息提示狀態改變
         // game->message = TextFormat("%s And fell back to sleep.", game->message);
