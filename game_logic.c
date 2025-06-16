@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stddef.h> // 為了 offsetof
+extern Texture2D scream_images[3];
 
 #define container_of(ptr, type, member) \
     ((type *)((char *)(ptr) - offsetof(type, member)))
@@ -29,6 +30,10 @@ void end_turn_pvp(Game* game);
 bool ultra_unlocked[4] = {false};  // 預設全部鎖住
 
 void play_card(game* g, int player_id, int32_t card_id);
+
+int8_t screem = 0;
+float screemTime = 0.5f;
+int8_t screemInd = 1;
 
 
 
@@ -499,15 +504,30 @@ void UpdateGame(Game* game, bool* should_close) {
         if (game->inner_game.players[0].life <= 0) { game->message = "You Lose!"; game->current_state = GAME_STATE_GAME_OVER; }
         if (game->inner_game.players[1].life <= 0) { game->message = "You Win!"; game->current_state = GAME_STATE_GAME_OVER; }
     }
-    
-    if (game->show_scream_image) {
-        game->scream_timer -= GetFrameTime();
-        if (game->scream_timer <= 0.0f) {
+
+
+        
+    if (screem) {
+        game->show_scream_image = true;
+        game->scream_image_index = screemInd;
+
+        // 🔽 加入置中繪圖邏輯
+        Texture2D scream = scream_images[screemInd];
+        int x = (GetScreenWidth() - scream.width) / 2;
+        int y = (GetScreenHeight() - scream.height) / 2;
+        DrawTexture(scream, x, y, WHITE);
+
+        // ⏲️ 更新時間
+        screemTime -= GetFrameTime();
+        if (screemTime <= 0.0f) {
             game->show_scream_image = false;
+            screemTime = 0.5f;
+            screemInd = rand() % 3;
+            screem = 0;
         }
+
         return; // 跳過其他更新
     }
-
 }
 
 void UpdatePVPGame(Game* game, bool* should_close) {
@@ -1033,6 +1053,7 @@ void start_turn(Game* game) {
 
 void InitGame(Game* game) {
     srand(time(NULL));
+    screemInd = rand() % 3;
     memset(game, 0, sizeof(Game));
     game->current_state = GAME_STATE_CHOOSE_CHAR;
     game->message = "Select Your Hero";
@@ -1510,11 +1531,10 @@ int apply_damage(player* attacker, player* defender, int base_damage) {
             defender->sleepingBeauty.AWAKEN = 1;
             printf("DEBUG: Sleeping Beauty has AWAKENED!\n");
             // 您可以在這裡設定 game->message 來通知玩家
-            Game* full_game = container_of(defender, Game, inner_game.players[1]);
+            // Game* full_game = container_of(defender, Game, inner_game.players[1]);
 
-            full_game->show_scream_image = true;
-            full_game->scream_timer = 0.5f;
-            full_game->scream_image_index = rand() % 3;
+            screem = 1;
+            
         }
     }
 
@@ -1627,16 +1647,17 @@ void play_card(game* g, int player_id, int32_t card_id) {
     if (card->type == ATTACK || (card->type == SKILL && (card->id == 501 || card->id == 511))) {
         player* enemy = &g->players[(player_id + 1) % 2];
         int damage = card->value;
-        if (enemy->defense > 0) {
-            if (enemy->defense >= damage) {
-                enemy->defense -= damage;
-                damage = 0;
-            } else {
-                damage -= enemy->defense;
-                enemy->defense = 0;
-            }
-        }
-        enemy->life -= damage;
+        apply_damage(NULL, enemy, damage);
+        // if (enemy->defense > 0) {
+        //     if (enemy->defense >= damage) {
+        //         enemy->defense -= damage;
+        //         damage = 0;
+        //     } else {
+        //         damage -= enemy->defense;
+        //         enemy->defense = 0;
+        //     }
+        // }
+        // enemy->life -= damage;
         
     } else if (card->type == DEFENSE || (card->type == SKILL && (card->id == 502 || card->id == 512))) {
         p->defense += card->value;

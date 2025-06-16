@@ -1125,17 +1125,26 @@ void DrawGame( Game* game, Texture2D character_images[10]) {
     
     
     if (game->show_scream_image) {
+        Texture2D scream = screamImages[game->scream_image_index];
+        Rectangle dest = {0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()};
+        Vector2 origin = {0, 0};
+
+        // 偏移 scream2
+        if (game->scream_image_index == 1) {
+            dest.x -= 40; // 左移
+            dest.y += 20; // 下移
+        }
+
         DrawTexturePro(
-            screamImages[game->scream_image_index],
-            (Rectangle){0, 0, screamImages[0].width, screamImages[0].height},
-            (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
-            (Vector2){0, 0},
+            scream,
+            (Rectangle){0, 0, scream.width, scream.height},
+            dest,
+            origin,
             0.0f,
             WHITE
         );
         return;
     }
-    
     DrawTexture(backgroundTexture, 0, 0, WHITE);
     
     switch (game->current_state) {

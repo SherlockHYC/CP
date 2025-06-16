@@ -23,7 +23,7 @@ Texture2D backgroundTexture;
 Texture2D character_images[10];
 Music dorothyBGM;
 Texture2D screamImages[3];
-
+Texture2D scream_images[3];
 void show_help();
 
 int main(int argc, char *argv[]) {
@@ -89,6 +89,9 @@ int main(int argc, char *argv[]) {
     screamImages[0] = LoadTexture("assets/scream.png");
     screamImages[1] = LoadTexture("assets/scream1.png");
     screamImages[2] = LoadTexture("assets/scream2.png");
+    scream_images[0] = LoadTexture("assets/scream1.png");
+    scream_images[1] = LoadTexture("assets/scream2.png");
+    scream_images[2] = LoadTexture("assets/scream3.png");
 
     character_images[0] = LoadTexture("assets/redhood.png");
     character_images[1] = LoadTexture("assets/snowwhite.png");
